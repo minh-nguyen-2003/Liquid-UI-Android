@@ -1,0 +1,22 @@
+<resources>
+    <string name="app_name">Liquid UI</string>
+
+    <string name="demo_title">Liquid Glass</string>
+    <string name="demo_subtitle">Chỉ cần bọc content bằng LiquidGlassView</string>
+
+    <string name="section_pill">lgv_pill — tròn / pill tự tính bán kính</string>
+    <string name="section_card">lgv_cornerRadius — thẻ bo góc</string>
+    <string name="section_list">lgv_glow=false — item list, vẽ nhẹ hơn</string>
+    <string name="section_playground">Đổi bằng code lúc chạy</string>
+
+    <string name="search_hint">Tìm kiếm…</string>
+    <string name="card_title">Glass Card</string>
+    <string name="card_desc">Nền đen 20% + vệt sáng chạy theo pháp tuyến mép, nên cạnh thẳng sáng đều còn góc bo thì có bevel sáng/tối.</string>
+
+    <string name="item_1">Item không glow</string>
+    <string name="item_2">Nhẹ hơn khi cuộn list</string>
+
+    <string name="label_alpha">highlightAlpha</string>
+    <string name="label_glow">isGlowEnabled</string>
+    <string name="btn_orientation">Nguồn sáng: %s</string>
+</resources>

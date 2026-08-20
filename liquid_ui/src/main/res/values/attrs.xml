@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Nền kính mờ + vệt sáng chạy theo mép — xem LiquidGlassView -->
+    <declare-styleable name="LiquidGlassView">
+        <attr name="lgv_backgroundColor" format="color" />
+        <attr name="lgv_cornerRadius" format="dimension" />
+        <!-- true: bán kính = nửa cạnh ngắn ⇒ view vuông ra hình tròn, view ngang ra pill -->
+        <attr name="lgv_pill" format="boolean" />
+        <attr name="lgv_highlightColor" format="color" />
+        <attr name="lgv_highlightWidth" format="dimension" />
+        <attr name="lgv_highlightAlpha" format="float" />
+        <attr name="lgv_glow" format="boolean" />
+        <attr name="lgv_clipContent" format="boolean" />
+        <!-- Giá trị enum phải khớp hằng số trong LiquidGlassOrientation -->
+        <attr name="lgv_highlightOrientation">
+            <enum name="left_right" value="0" />
+            <enum name="top_bottom" value="1" />
+            <enum name="top_left_bottom_right" value="2" />
+            <enum name="top_right_bottom_left" value="3" />
+        </attr>
+    </declare-styleable>
+</resources>

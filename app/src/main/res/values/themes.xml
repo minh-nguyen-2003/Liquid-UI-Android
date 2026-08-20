@@ -1,0 +1,9 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Demo cố định nền tối: kính chỉ "ra chất" khi nằm trên nền có màu/ảnh phía sau. -->
+    <style name="Theme.LiquidUi" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowBackground">@drawable/bg_backdrop</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">false</item>
+    </style>
+</resources>

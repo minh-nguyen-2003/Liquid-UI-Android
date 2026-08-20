@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App có thể khai lại 2 màu này với cùng tên để đổi mặc định toàn cục
+         (resource của app luôn ghi đè resource cùng tên của library). -->
+
+    <!-- Nền kính mặc định: đen 20% -->
+    <color name="liquid_glass_background">#33000000</color>
+    <!-- Màu vệt sáng mặc định -->
+    <color name="liquid_glass_highlight">#FFFFFFFF</color>
+</resources>

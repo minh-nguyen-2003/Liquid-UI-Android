@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Nền demo nhiều màu để thấy rõ lớp kính: gradient tối + 2 quầng màu loang. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:angle="315"
+                android:endColor="@color/backdrop_end"
+                android:startColor="@color/backdrop_start"
+                android:type="linear" />
+        </shape>
+    </item>
+    <item
+        android:width="420dp"
+        android:height="420dp"
+        android:gravity="top|start"
+        android:left="-120dp"
+        android:top="-80dp">
+        <shape android:shape="oval">
+            <gradient
+                android:centerColor="#33FF4D9D"
+                android:endColor="#00FF4D9D"
+                android:gradientRadius="210dp"
+                android:startColor="@color/blob_pink"
+                android:type="radial" />
+        </shape>
+    </item>
+    <item
+        android:width="460dp"
+        android:height="460dp"
+        android:gravity="bottom|end"
+        android:bottom="-140dp"
+        android:right="-140dp">
+        <shape android:shape="oval">
+            <gradient
+                android:centerColor="#2A33D6FF"
+                android:endColor="#0033D6FF"
+                android:gradientRadius="230dp"
+                android:startColor="@color/blob_cyan"
+                android:type="radial" />
+        </shape>
+    </item>
+</layer-list>
