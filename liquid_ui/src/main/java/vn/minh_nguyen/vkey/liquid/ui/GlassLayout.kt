@@ -36,7 +36,9 @@ import kotlin.math.sign
  *
  * Bo góc theo [cornerRadius]; âm (mặc định) = bo tròn hai đầu theo nửa cạnh ngắn (hình tròn khi vuông).
  *
- * XML: `app:gl_color`, `app:gl_cornerRadius`, `app:gl_blur`, `app:gl_backdrop`.
+ * Độ mờ chỉnh bằng [blurRadius] (mờ kiểu Gauss, mặc định 4dp).
+ *
+ * XML: `app:gl_color`, `app:gl_cornerRadius`, `app:gl_blur`, `app:gl_blurRadius`, `app:gl_backdrop`.
  *
  * Lớp con: [GlassLensLayout] thêm bẻ cong nền ở mép (khúc xạ); [LiquidGlassLayout] thêm tiếp viền sáng + ánh trượt kiểu liquid.
  */
@@ -69,6 +71,16 @@ open class GlassLayout @JvmOverloads constructor(
         }
 
     /**
+     * Độ mờ của nền (px): độ lệch chuẩn của mờ Gauss, như `blur()` của CSS — càng lớn nền càng nhoè. 0 = không làm mờ thêm (nền vẫn hơi
+     * mềm vì chụp thu nhỏ). Mặc định 4dp.
+     */
+    var blurRadius: Float = resources.displayMetrics.density * DEFAULT_BLUR_DP
+        set(value) {
+            field = value.coerceAtLeast(0f)
+            invalidate()
+        }
+
+    /**
      * Làm mờ những gì phía sau: [GlassBackdropMode.ALL] (mặc định) = mọi thứ đang hiện, cả giao diện thường lẫn video;
      * [GlassBackdropMode.MEDIA] = chỉ video và ảnh phủ màn (nhẹ hơn).
      */
@@ -85,6 +97,7 @@ open class GlassLayout @JvmOverloads constructor(
      */
     var backdropRoot: View? = null
         set(value) {
+            if (field !== value && isAttachedToWindow) GlassBackdrop.of(field ?: rootView).release(this)
             field = value
             invalidate()
         }
@@ -144,6 +157,9 @@ open class GlassLayout @JvmOverloads constructor(
     /** Ảnh nền đã dùng ở lượt vẽ gần nhất (`null` = lượt đó chưa có ảnh nền). */
     private var drawnBackdrop: Bitmap? = null
 
+    /** Lượt chụp ([GlassBackdrop.generation]) mà mảnh nền bẻ cong đang hiện. */
+    private var lensGeneration = -1
+
     /**
      * Trước mỗi lượt vẽ của cửa sổ: cập nhật ảnh nền mờ dùng chung (tự giới hạn tần suất). Ảnh nền đổi nội dung tại chỗ nên không cần vẽ
      * lại view; chỉ vẽ lại khi view đổi chỗ trong cửa sổ (vuốt trang) hoặc ảnh nền vừa có / vừa mất / đổi cỡ.
@@ -152,17 +168,36 @@ open class GlassLayout @JvmOverloads constructor(
         if (blurEnabled && isShown) {
             val root = backdropRoot ?: rootView
             val backdrop = GlassBackdrop.of(root)
-            backdrop.update(root, all = backdropMode == GlassBackdropMode.ALL)
+            backdrop.update(root, this, all = backdropMode == GlassBackdropMode.ALL)
             getLocationOnScreen(windowLocation)
             val current = backdrop.bitmap?.takeIf { backdrop.hasContent }
             if (windowLocation[0] != drawnX || windowLocation[1] != drawnY || current !== drawnBackdrop) {
                 invalidate()
-            } else if (current != null && refraction > 0f) {
-                // View đứng yên: chỉ cần lấy mẫu lại màu từ khung hình nền mới
+            } else if (current != null && refraction > 0f && backdrop.generation != lensGeneration) {
+                // View đứng yên, nền vừa chụp lại: chỉ cần lấy mẫu lại màu từ khung hình nền mới
+                lensGeneration = backdrop.generation
                 renderLens(current)
             }
         }
         true
+    }
+
+    /**
+     * Phần nền view này cần, điểm ảnh trong toạ độ của [root], ghi vào [out]: khung của view, nới ra tới chỗ xa nhất mà phần bẻ cong / thu
+     * nhỏ nền lấy tới. Trả về `false` khi view không cần nền (tắt làm mờ, đang ẩn, chưa có kích thước).
+     */
+    internal fun backdropRegion(root: View, out: RectF): Boolean {
+        if (!blurEnabled || !isAttachedToWindow || !isShown || width <= 0 || height <= 0) return false
+        getLocationOnScreen(windowLocation)
+        root.getLocationOnScreen(rootLocation)
+        val zoom = backdropZoom
+        val reach = min(width, height) / 2f * refraction / zoom + GlassBackdrop.SCALE
+        val halfWidth = width / 2f * max(1f, 1f / zoom) + reach
+        val halfHeight = height / 2f * max(1f, 1f / zoom) + reach
+        val centerX = windowLocation[0] - rootLocation[0] + width / 2f
+        val centerY = windowLocation[1] - rootLocation[1] + height / 2f
+        out.set(centerX - halfWidth, centerY - halfHeight, centerX + halfWidth, centerY + halfHeight)
+        return true
     }
 
     init {
@@ -171,6 +206,7 @@ open class GlassLayout @JvmOverloads constructor(
             glassColor = values.getColor(R.styleable.GlassLayout_gl_color, glassColor)
             cornerRadius = values.getDimension(R.styleable.GlassLayout_gl_cornerRadius, cornerRadius)
             blurEnabled = values.getBoolean(R.styleable.GlassLayout_gl_blur, blurEnabled)
+            blurRadius = values.getDimension(R.styleable.GlassLayout_gl_blurRadius, blurRadius)
             backdropMode = values.getInt(R.styleable.GlassLayout_gl_backdrop, backdropMode)
             values.recycle()
         }
@@ -213,7 +249,7 @@ open class GlassLayout @JvmOverloads constructor(
     protected open fun onDrawGlassOverlay(canvas: Canvas, width: Float, height: Float, radius: Float) = Unit
 
     /**
-     * Vẽ phần ảnh nền mờ nằm đúng sau view (ảnh nhỏ hơn cửa sổ [GlassBackdrop.SCALE] lần nên phóng lại bằng lọc song tuyến tính → mờ mịn).
+     * Vẽ phần ảnh nền mờ nằm đúng sau view (ảnh nhỏ hơn gốc nền [GlassBackdrop.SCALE] lần nên phóng lại bằng lọc song tuyến tính → mờ mịn).
      * View đã cắt theo hình kính (clipToOutline). Chưa có ảnh nền thì bỏ qua.
      */
     private fun drawBackdrop(canvas: Canvas, width: Float, height: Float) {
@@ -227,6 +263,7 @@ open class GlassLayout @JvmOverloads constructor(
         val backdrop = GlassBackdrop.of(root)
         val bitmap = backdrop.bitmap?.takeIf { backdrop.hasContent } ?: return
         drawnBackdrop = bitmap
+        lensGeneration = backdrop.generation
         root.getLocationOnScreen(rootLocation)
         if (refraction > 0f) {
             drawRefracted(canvas, bitmap, width, height)
@@ -372,12 +409,16 @@ open class GlassLayout @JvmOverloads constructor(
 
     override fun onDetachedFromWindow() {
         viewTreeObserver.removeOnPreDrawListener(preDrawListener)
+        GlassBackdrop.of(backdropRoot ?: rootView).release(this)
         super.onDetachedFromWindow()
     }
 
     private companion object {
         /** #171717 30 %. */
         val DEFAULT_GLASS_COLOR = Color.argb(77, 23, 23, 23)
+
+        /** Độ mờ mặc định: mờ Gauss độ lệch chuẩn 4dp. */
+        const val DEFAULT_BLUR_DP = 4f
 
         /** Độ cong dồn về mép theo luỹ thừa 3. */
         const val REFRACTION_POWER = 3f

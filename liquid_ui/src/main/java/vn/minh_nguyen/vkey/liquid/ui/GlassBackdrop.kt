@@ -5,13 +5,22 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.PaintFlagsDrawFilter
+import android.graphics.Path
 import android.graphics.RectF
 import android.os.SystemClock
 import android.view.TextureView
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.widget.ImageView
 import java.util.WeakHashMap
+import kotlin.math.ceil
+import kotlin.math.floor
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 /**
  * Ảnh nền mờ dùng chung cho mọi [GlassLayout] (và lớp con) có cùng gốc nền: bản chụp thu nhỏ 1/[SCALE] của những thứ nằm sau các view
@@ -22,20 +31,67 @@ import java.util.WeakHashMap
  * - **chỉ video / ảnh** ([GlassBackdropMode.MEDIA], nhẹ hơn): TextureView có hình và ImageView phủ ít nhất nửa cửa sổ.
  * Có một view kính xin chế độ toàn bộ là cả gốc nền chụp toàn bộ.
  *
- * Chụp tối đa một lần mỗi [MIN_INTERVAL_MS], gọi từ `onPreDraw` của các view kính: màn hình có lượt vẽ mới (video chạy, danh sách cuộn…)
- * thì ảnh nền cập nhật; màn hình đứng yên thì không chụp nữa.
+ * Chỉ làm đúng phần cần: mỗi lượt chụp chỉ vẽ lại và làm mờ các vùng nằm sau những view kính đang hiện (cộng một vành đệm), nên vài nút
+ * nhỏ trên màn hình tốn rất ít. Làm mờ bằng [BLUR_PASSES] lượt mờ hộp chồng nhau — gần với mờ Gauss, mịn, không lộ ô vuông — với độ mờ
+ * riêng của từng view ([GlassLayout.blurRadius]).
+ *
+ * Cập nhật theo lượt vẽ: gọi từ `onPreDraw` của các view kính, tối đa một lần mỗi [MIN_INTERVAL_MS] (theo kịp từng khung hình ở 60 Hz nên
+ * nền mờ không trễ sau nội dung đang cuộn); view kính vừa hiện / vừa đổi chỗ thì chụp ngay. Màn hình đứng yên thì không chụp. View kính ở
+ * cửa sổ khác với gốc nền (hộp thoại) chỉ chụp lại khi màn phía sau thật sự vẽ lại, không chụp theo hiệu ứng của hộp thoại.
  */
 class GlassBackdrop private constructor() {
 
-    /** Ảnh nền đã làm mờ, cỡ = cửa sổ / [SCALE]; `null` khi chưa chụp được. */
+    /** Ảnh nền đã làm mờ, cỡ = gốc nền / [SCALE]; chỉ các vùng sau view kính có nội dung. `null` khi chưa chụp được. */
     var bitmap: Bitmap? = null
         private set
 
-    /** Lượt chụp gần nhất có thấy video / ảnh nền nào không (không thì nút kính chỉ vẽ nền màu). */
+    /** Lượt chụp gần nhất có thấy video / ảnh nền nào không (không thì view kính chỉ vẽ lớp màu). */
     var hasContent = false
         private set
 
+    /** Tăng sau mỗi lượt chụp xong: view kính biết ảnh nền vừa đổi nội dung để lấy mẫu lại. */
+    var generation = 0
+        private set
+
+    /** Vùng nền của một view kính ở lượt chụp gần nhất. */
+    private class Region {
+        /** Vùng view cần, điểm ảnh của gốc nền, và độ mờ (độ lệch chuẩn, điểm ảnh màn hình). */
+        val bounds = RectF()
+        var sigma = 0f
+
+        /** View nằm ở cửa sổ khác với gốc nền (hộp thoại). */
+        var otherWindow = false
+
+        /** Trong ảnh nền: vùng dùng thật, vùng chụp (có thêm vành đệm làm mờ) và bán kính mờ hộp. */
+        var left = 0
+        var top = 0
+        var right = 0
+        var bottom = 0
+        var outerLeft = 0
+        var outerTop = 0
+        var outerRight = 0
+        var outerBottom = 0
+        var radius = 0
+        var active = false
+    }
+
+    private val regions = WeakHashMap<GlassLayout, Region>()
+    private val probe = RectF()
+
+    /** Ảnh chụp chưa làm mờ (đích của [canvas]); [bitmap] nhận phần đã làm mờ. */
+    private var capture: Bitmap? = null
     private var canvas: CaptureCanvas? = null
+    private val clipPath = Path()
+
+    /** Gốc nền đã vẽ lại từ lượt chụp trước chưa — dùng cho view kính ở cửa sổ khác (đặt bởi [rootListener]). */
+    private var rootDirty = true
+    private var observed: ViewTreeObserver? = null
+    private val rootListener = ViewTreeObserver.OnPreDrawListener {
+        rootDirty = true
+        // Màn phía sau vừa đổi: cho view kính ở cửa sổ khác một lượt vẽ để nó chụp lại nền
+        for ((view, region) in regions) if (region.otherWindow) view.invalidate()
+        true
+    }
 
     /** Đã có view kính xin chụp toàn bộ giao diện ([GlassBackdropMode.ALL]). */
     private var captureAll = false
@@ -51,46 +107,157 @@ class GlassBackdrop private constructor() {
     private val frameBounds = RectF()
     private val framePaint = Paint(Paint.FILTER_BITMAP_FLAG)
 
-    /** Chụp lại nền của [root] nếu đã quá [MIN_INTERVAL_MS] từ lượt trước; [all] = view gọi cần chụp toàn bộ giao diện. */
-    fun update(root: View, all: Boolean = false) {
-        if (all) captureAll = true
+    /**
+     * Gọi từ `onPreDraw` của [view]: chụp lại nền của [root] nếu cần — [view] vừa hiện / đổi chỗ / đổi độ mờ thì chụp ngay, không thì tối
+     * đa một lần mỗi [MIN_INTERVAL_MS]. Mỗi lượt chụp làm mới vùng của mọi view kính đang hiện, nên nhiều view cùng đổi chỗ trong một
+     * khung hình (hàng nút đang cuộn) vẫn chỉ chụp một lần. [all] = [view] cần chụp toàn bộ giao diện.
+     */
+    fun update(root: View, view: GlassLayout, all: Boolean = false) {
+        var force = false
+        if (all && !captureAll) {
+            captureAll = true
+            force = true
+        }
+        if (!view.backdropRegion(root, probe)) {
+            regions.remove(view)
+            return
+        }
+        val sameWindow = view.rootView === root.rootView
+        if (!sameWindow) observe(root)
+        var region = regions[view]
+        if (region == null) {
+            region = Region()
+            regions[view] = region
+            force = true
+        } else if (region.bounds != probe || region.sigma != view.blurRadius) {
+            force = true
+        }
+        region.otherWindow = !sameWindow
         val now = SystemClock.uptimeMillis()
-        if (now - lastCaptureAt < MIN_INTERVAL_MS) return
-        lastCaptureAt = now
+        if (!force) {
+            if (!sameWindow && !rootDirty) return
+            if (now - lastCaptureAt < MIN_INTERVAL_MS) return
+        }
         val width = root.width / SCALE
         val height = root.height / SCALE
         if (width <= 0 || height <= 0) return
+        lastCaptureAt = now
+        rootDirty = false
+
+        var raw = capture
         var target = bitmap
-        if (target == null || target.width != width || target.height != height) {
+        if (raw == null || target == null || raw.width != width || raw.height != height) {
+            raw = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             target = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            target.eraseColor(Color.BLACK)
+            capture = raw
             bitmap = target
-            canvas = CaptureCanvas(target)
-            pixels = IntArray(width * height)
-            scratch = IntArray(width * height)
+            canvas = CaptureCanvas(raw).apply {
+                // Vẽ thu nhỏ 1/SCALE: lọc song tuyến tính mọi ảnh và khử răng cưa mọi nét để nền không lấm tấm, không nhấp nháy khi trượt
+                drawFilter = PaintFlagsDrawFilter(0, Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)
+            }
         }
         val canvas = canvas ?: return
-        // Phần không có video (viền đen quanh video) là nền đen
+
+        // Vùng hiện tại của mọi view kính đang hiện → phần ảnh nền phải chụp
+        clipPath.reset()
+        var any = false
+        val iterator = regions.entries.iterator()
+        while (iterator.hasNext()) {
+            val entry = iterator.next()
+            val glass = entry.key
+            val item = entry.value
+            if (glass == null || !glass.backdropRegion(root, probe)) {
+                iterator.remove()
+                continue
+            }
+            item.bounds.set(probe)
+            item.sigma = glass.blurRadius
+            item.radius = boxRadius(item.sigma / SCALE)
+            // Vành đệm: đủ cho các lượt mờ lấy tới, thêm 1 điểm ảnh cho lọc song tuyến tính khi phóng ảnh lên
+            val margin = item.radius * BLUR_PASSES + 2
+            item.left = (floor(probe.left / SCALE).toInt() - 1).coerceIn(0, width)
+            item.top = (floor(probe.top / SCALE).toInt() - 1).coerceIn(0, height)
+            item.right = (ceil(probe.right / SCALE).toInt() + 1).coerceIn(0, width)
+            item.bottom = (ceil(probe.bottom / SCALE).toInt() + 1).coerceIn(0, height)
+            item.active = item.right > item.left && item.bottom > item.top
+            if (!item.active) continue
+            item.outerLeft = max(0, item.left - margin)
+            item.outerTop = max(0, item.top - margin)
+            item.outerRight = min(width, item.right + margin)
+            item.outerBottom = min(height, item.bottom + margin)
+            clipPath.addRect(
+                item.outerLeft.toFloat(), item.outerTop.toFloat(), item.outerRight.toFloat(), item.outerBottom.toFloat(), Path.Direction.CW
+            )
+            any = true
+        }
+        if (!any) return
+
+        // Chỉ vẽ lại phần nằm trong các vùng đó
+        val save = canvas.save()
+        canvas.clipPath(clipPath)
+        // Phần không có nội dung (viền đen quanh video) là nền đen
         canvas.drawColor(Color.BLACK)
         hasContent = false
         if (captureAll) {
             videoBranches.clear()
             collectVideoBranches(root)
-            val save = canvas.save()
             canvas.scale(1f / SCALE, 1f / SCALE)
             drawTree(root, null, canvas)
-            canvas.restoreToCount(save)
             videoBranches.clear()
             hasContent = true
         } else {
             drawSources(root, root, canvas)
         }
+        canvas.restoreToCount(save)
         if (!hasContent) return
-        target.getPixels(pixels, 0, width, 0, 0, width, height)
-        repeat(BLUR_PASSES) {
-            boxBlurHorizontal(pixels, scratch, width, height, BLUR_RADIUS)
-            boxBlurVertical(scratch, pixels, width, height, BLUR_RADIUS)
+
+        // Làm mờ từng vùng từ ảnh chụp gốc (vùng chồng nhau vẫn ra cùng kết quả), chỉ ghi phần dùng thật vào ảnh nền
+        for (item in regions.values) {
+            if (!item.active) continue
+            val outerWidth = item.outerRight - item.outerLeft
+            val outerHeight = item.outerBottom - item.outerTop
+            val size = outerWidth * outerHeight
+            if (pixels.size < size) {
+                pixels = IntArray(size)
+                scratch = IntArray(size)
+            }
+            raw.getPixels(pixels, 0, outerWidth, item.outerLeft, item.outerTop, outerWidth, outerHeight)
+            if (item.radius > 0) {
+                repeat(BLUR_PASSES) {
+                    boxBlurHorizontal(pixels, scratch, outerWidth, outerHeight, item.radius)
+                    boxBlurVertical(scratch, pixels, outerWidth, outerHeight, item.radius)
+                }
+            }
+            val offset = (item.top - item.outerTop) * outerWidth + (item.left - item.outerLeft)
+            target.setPixels(pixels, offset, outerWidth, item.left, item.top, item.right - item.left, item.bottom - item.top)
         }
-        target.setPixels(pixels, 0, width, 0, 0, width, height)
+        generation++
+    }
+
+    /** [view] không dùng nền này nữa (rời cửa sổ). */
+    fun release(view: GlassLayout) {
+        regions.remove(view)
+    }
+
+    /** Theo dõi lượt vẽ của [root] (ở cửa sổ khác với view kính) để biết khi nào màn phía sau đổi. */
+    private fun observe(root: View) {
+        val observer = root.viewTreeObserver
+        if (observer === observed && observer.isAlive) return
+        observed?.takeIf { it.isAlive }?.removeOnPreDrawListener(rootListener)
+        observer.addOnPreDrawListener(rootListener)
+        observed = observer
+        rootDirty = true
+    }
+
+    /**
+     * Bán kính mờ hộp (điểm ảnh của ảnh nền) để [BLUR_PASSES] lượt chồng nhau cho ra độ lệch chuẩn gần [sigma]: phương sai một lượt hộp
+     * bán kính r là ((2r + 1)² − 1) / 12, các lượt cộng dồn. 0 = không làm mờ thêm.
+     */
+    private fun boxRadius(sigma: Float): Int {
+        if (sigma <= 0f) return 0
+        val side = sqrt(12f * sigma * sigma / BLUR_PASSES + 1f)
+        return ((side - 1f) / 2f).roundToInt().coerceIn(1, MAX_BOX_RADIUS)
     }
 
     /** [view] có đang hiện không (ẩn, trong suốt hẳn hoặc chưa có kích thước thì bỏ qua cả nhánh). */
@@ -116,6 +283,7 @@ class GlassBackdrop private constructor() {
      * - TextureView: trải khung hình video lên khung của view;
      * - nhóm có chứa video: vẽ nền của nhóm rồi lần lượt từng con (dưới trước, trên sau) để video nằm đúng giữa các lớp;
      * - còn lại: để view tự vẽ cả nhánh (view kính tự bỏ qua khi gặp [CaptureCanvas]).
+     * View nằm ngoài các vùng cần chụp thì bỏ qua.
      */
     private fun drawTree(view: View, parent: View?, canvas: Canvas) {
         if (!isDrawable(view) || view is GlassLayout) return
@@ -126,7 +294,7 @@ class GlassBackdrop private constructor() {
         canvas.concat(view.matrix)
         @Suppress("DEPRECATION")
         if (canvas.quickReject(0f, 0f, width, height, Canvas.EdgeType.BW)) {
-            // Nằm ngoài ảnh nền (trang bên cạnh của ViewPager, mục đã cuộn khuất)
+            // Nằm ngoài vùng cần chụp (trang bên cạnh của ViewPager, mục đã cuộn khuất, chỗ không có view kính)
             canvas.restoreToCount(save)
             return
         }
@@ -230,21 +398,24 @@ class GlassBackdrop private constructor() {
     /** Làm mờ hộp theo hàng: [src] → [dst], cửa sổ trượt bán kính [radius], mép lặp lại điểm biên. */
     private fun boxBlurHorizontal(src: IntArray, dst: IntArray, width: Int, height: Int, radius: Int) {
         val window = radius * 2 + 1
+        val last = width - 1
         for (y in 0 until height) {
             val row = y * width
             var r = 0
             var g = 0
             var b = 0
             for (i in -radius..radius) {
-                val color = src[row + i.coerceIn(0, width - 1)]
+                val color = src[row + (if (i < 0) 0 else if (i > last) last else i)]
                 r += (color shr 16) and 0xFF
                 g += (color shr 8) and 0xFF
                 b += color and 0xFF
             }
             for (x in 0 until width) {
                 dst[row + x] = (0xFF shl 24) or ((r / window) shl 16) or ((g / window) shl 8) or (b / window)
-                val leaving = src[row + (x - radius).coerceIn(0, width - 1)]
-                val entering = src[row + (x + radius + 1).coerceIn(0, width - 1)]
+                val out = x - radius
+                val into = x + radius + 1
+                val leaving = src[row + (if (out < 0) 0 else if (out > last) last else out)]
+                val entering = src[row + (if (into > last) last else into)]
                 r += ((entering shr 16) and 0xFF) - ((leaving shr 16) and 0xFF)
                 g += ((entering shr 8) and 0xFF) - ((leaving shr 8) and 0xFF)
                 b += (entering and 0xFF) - (leaving and 0xFF)
@@ -255,20 +426,23 @@ class GlassBackdrop private constructor() {
     /** Làm mờ hộp theo cột: [src] → [dst]. */
     private fun boxBlurVertical(src: IntArray, dst: IntArray, width: Int, height: Int, radius: Int) {
         val window = radius * 2 + 1
+        val last = height - 1
         for (x in 0 until width) {
             var r = 0
             var g = 0
             var b = 0
             for (i in -radius..radius) {
-                val color = src[i.coerceIn(0, height - 1) * width + x]
+                val color = src[(if (i < 0) 0 else if (i > last) last else i) * width + x]
                 r += (color shr 16) and 0xFF
                 g += (color shr 8) and 0xFF
                 b += color and 0xFF
             }
             for (y in 0 until height) {
                 dst[y * width + x] = (0xFF shl 24) or ((r / window) shl 16) or ((g / window) shl 8) or (b / window)
-                val leaving = src[(y - radius).coerceIn(0, height - 1) * width + x]
-                val entering = src[(y + radius + 1).coerceIn(0, height - 1) * width + x]
+                val out = y - radius
+                val into = y + radius + 1
+                val leaving = src[(if (out < 0) 0 else if (out > last) last else out) * width + x]
+                val entering = src[(if (into > last) last else into) * width + x]
                 r += ((entering shr 16) and 0xFF) - ((leaving shr 16) and 0xFF)
                 g += ((entering shr 8) and 0xFF) - ((leaving shr 8) and 0xFF)
                 b += (entering and 0xFF) - (leaving and 0xFF)
@@ -280,19 +454,21 @@ class GlassBackdrop private constructor() {
     class CaptureCanvas internal constructor(bitmap: Bitmap) : Canvas(bitmap)
 
     companion object {
-        /** Ảnh nền nhỏ hơn cửa sổ chừng này lần mỗi chiều (ảnh càng nhỏ càng mờ và càng nhẹ). */
-        const val SCALE = 6
+        /** Ảnh nền nhỏ hơn gốc nền chừng này lần mỗi chiều. */
+        const val SCALE = 4
 
-        /** Chụp lại nhanh nhất mỗi 33 ms (≈ 30 lần / giây). */
-        private const val MIN_INTERVAL_MS = 33L
+        /** Chụp lại nhanh nhất mỗi 12 ms: theo từng khung hình ở 60 Hz, cách khung ở 120 Hz. */
+        private const val MIN_INTERVAL_MS = 12L
 
-        /** Làm mờ hộp bán kính 1 điểm ảnh nhỏ, lặp 2 lượt (mờ nhẹ ≈ 12 px trên màn hình: nền còn đủ rõ để thấy mép kính bẻ cong). */
-        private const val BLUR_RADIUS = 1
-        private const val BLUR_PASSES = 2
+        /** Ba lượt mờ hộp chồng nhau cho ra nền mờ gần với mờ Gauss. */
+        private const val BLUR_PASSES = 3
+
+        /** Bán kính mờ hộp lớn nhất (điểm ảnh của ảnh nền) — chặn chi phí khi đặt độ mờ quá lớn. */
+        private const val MAX_BOX_RADIUS = 12
 
         private val backdrops = WeakHashMap<View, GlassBackdrop>()
 
-        /** Ảnh nền dùng chung của cửa sổ có gốc [root]. */
+        /** Ảnh nền dùng chung của các view kính có gốc nền [root]. */
         fun of(root: View): GlassBackdrop = backdrops.getOrPut(root) { GlassBackdrop() }
     }
 }

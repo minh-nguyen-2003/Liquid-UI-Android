@@ -28,6 +28,8 @@
         <attr name="gl_cornerRadius" format="dimension" />
         <!-- Làm mờ nội dung phía sau; mặc định true -->
         <attr name="gl_blur" format="boolean" />
+        <!-- Độ mờ của nền: độ lệch chuẩn của mờ Gauss (như blur() của CSS), càng lớn càng nhoè; mặc định 4dp -->
+        <attr name="gl_blurRadius" format="dimension" />
         <!-- Làm mờ những gì phía sau. Giá trị enum phải khớp hằng số trong GlassBackdropMode -->
         <attr name="gl_backdrop">
             <!-- Mọi thứ đang hiện: giao diện thường lẫn video (mặc định) -->
