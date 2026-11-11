@@ -14,7 +14,7 @@ import android.widget.ImageView
 import java.util.WeakHashMap
 
 /**
- * Ảnh nền mờ dùng chung cho mọi [LiquidGlassLayout] trong một cửa sổ: bản chụp thu nhỏ 1/[SCALE] của những thứ nằm sau các nút kính —
+ * Ảnh nền mờ dùng chung cho mọi [GlassLayout] (và lớp con) trong một cửa sổ: bản chụp thu nhỏ 1/[SCALE] của những thứ nằm sau các nút kính —
  * khung hình video (TextureView, đọc bằng `getBitmap` vì TextureView không tự vẽ vào Canvas thường) và ảnh lớn phủ màn (ảnh bìa lúc video
  * đang tải) — rồi làm mờ. Mỗi nút kính vẽ lại đúng phần ảnh nằm sau nó, phóng to lên nên ra lớp kính mờ kiểu iOS.
  *
@@ -75,7 +75,7 @@ class GlassBackdrop private constructor() {
     private fun drawSources(view: View, root: View, canvas: Canvas) {
         if (view.visibility != View.VISIBLE || view.alpha <= 0f || view.width <= 0 || view.height <= 0) return
         when {
-            view is LiquidGlassLayout -> return
+            view is GlassLayout -> return
             view is TextureView -> drawTexture(view, root, canvas)
             view is ImageView ->
                 if (view.width.toLong() * view.height >= root.width.toLong() * root.height / 2) drawImage(view, root, canvas)

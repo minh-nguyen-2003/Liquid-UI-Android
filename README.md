@@ -133,10 +133,55 @@ Tạo hoàn toàn bằng code cũng được (dùng như `FrameLayout`):
   }
 ```
 
+## Chọn view nào
+
+"Liquid" = viền sáng / ánh trượt vẽ trên mặt kính. "Glass" = làm mờ thật nội dung phía sau (kể cả
+video). Tên view có chữ nào thì có phần đó:
+
+| View | Liquid (viền sáng) | Glass (làm mờ nền) | Bẻ cong ở mép |
+|---------------------|:---:|:---:|:---:|
+| `LiquidLayout` | có | không | không |
+| `GlassLayout` | không | có | không |
+| `GlassLensLayout` | không | có | có |
+| `LiquidGlassLayout` | có | có | có |
+
+`GlassLensLayout` kế thừa `GlassLayout`, `LiquidGlassLayout` kế thừa `GlassLensLayout`, nên phần
+"Nền được lấy từ đâu" và "Chi phí" ở mục dưới áp dụng cho cả ba.
+
+## GlassLayout / GlassLensLayout — kính thuần, không liquid
+
+Chỉ cần lớp kính mờ (thanh điều khiển, nhãn, khung chữ nổi trên video) mà không muốn viền sáng:
+
+```xml
+<!-- Chỉ làm mờ -->
+<vn.minh_nguyen.vkey.liquid.ui.GlassLayout
+    android:layout_width="match_parent"
+    android:layout_height="56dp"
+    app:gl_cornerRadius="16dp" />
+
+<!-- Làm mờ + bẻ cong nền ở mép như thấu kính -->
+<vn.minh_nguyen.vkey.liquid.ui.GlassLensLayout
+    android:layout_width="40dp"
+    android:layout_height="40dp"
+    app:gll_refraction="0.8" />
+```
+
+| Attribute | View | Kiểu | Mặc định | Mô tả |
+|-------------------|--------------------|-----------|---------------|-------------------------------------------------------------------------|
+| `gl_color` | cả hai | color | `#4D171717` | Màu phủ trên nền đã làm mờ, kèm độ mờ. |
+| `gl_cornerRadius` | cả hai | dimension | bo tròn hai đầu | Bán kính bo; không khai thì tròn / pill. |
+| `gl_blur` | cả hai | boolean | `true` | Làm mờ nền phía sau. Tắt thì chỉ còn lớp màu. |
+| `gll_refraction` | `GlassLensLayout` | float | `0.8` | Độ bẻ cong nền ở mép; `0` = tắt. |
+
+`GlassLayout` giữ nguyên màu và cỡ của nền (chỉ mờ đi). `GlassLensLayout` phóng nền 12 % quanh tâm
+và đậm màu hơn 40 % cho ra cảm giác thấu kính. Property trong code: `glassColor`, `cornerRadius`,
+`blurEnabled`, `refraction`.
+
 ## LiquidGlassLayout — kính có blur nền thật + khúc xạ
 
-`LiquidLayout` ở trên không blur. Khi cần nút kính **làm mờ thật nội dung phía sau** (kiểu iOS),
-ví dụ nút nổi trên trình phát video, dùng `LiquidGlassLayout`:
+`LiquidLayout` ở trên không blur. Khi cần nút kính đầy đủ — **làm mờ thật nội dung phía sau**, bẻ
+cong ở mép và có viền sáng liquid (kiểu iOS), ví dụ nút nổi trên trình phát video — dùng
+`LiquidGlassLayout`:
 
 ```xml
 <vn.minh_nguyen.vkey.liquid.ui.LiquidGlassLayout

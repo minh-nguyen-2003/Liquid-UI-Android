@@ -20,7 +20,23 @@
         </attr>
     </declare-styleable>
 
-    <!-- Nút kính có blur nền thật + khúc xạ ở mép (đặt trên video / ảnh) — xem LiquidGlassLayout -->
+    <!-- Kính chỉ làm mờ nền phía sau (kể cả video), không có viền sáng kiểu liquid — xem GlassLayout -->
+    <declare-styleable name="GlassLayout">
+        <!-- Màu phủ trên nền đã làm mờ, kèm độ mờ; mặc định #171717 30 % -->
+        <attr name="gl_color" format="color" />
+        <!-- Bo góc; không khai = bo tròn hai đầu (hình tròn khi vuông) -->
+        <attr name="gl_cornerRadius" format="dimension" />
+        <!-- Làm mờ video (TextureView) / ảnh phủ màn phía sau; mặc định true -->
+        <attr name="gl_blur" format="boolean" />
+    </declare-styleable>
+
+    <!-- Kính làm mờ + bẻ cong nền ở mép (kể cả video), không có viền sáng kiểu liquid — xem GlassLensLayout. Dùng thêm được gl_* -->
+    <declare-styleable name="GlassLensLayout">
+        <!-- Độ bẻ cong nền ở mép: mép với tới vành nền ngoài view bằng chừng này lần nửa cạnh ngắn; 0 = tắt; mặc định 0.8 -->
+        <attr name="gll_refraction" format="float" />
+    </declare-styleable>
+
+    <!-- Liquid glass đầy đủ: làm mờ + bẻ cong + viền sáng / ánh trượt (đặt trên video / ảnh) — xem LiquidGlassLayout -->
     <declare-styleable name="LiquidGlassLayout">
         <!-- Màu nền kính kèm độ mờ; mặc định #171717 30 % -->
         <attr name="lgl_color" format="color" />
