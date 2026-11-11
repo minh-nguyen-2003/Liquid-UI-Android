@@ -133,6 +133,59 @@ Tạo hoàn toàn bằng code cũng được (dùng như `FrameLayout`):
   }
 ```
 
+## LiquidGlassLayout — kính có blur nền thật + khúc xạ
+
+`LiquidGlassView` ở trên không blur. Khi cần nút kính **làm mờ thật nội dung phía sau** (kiểu iOS),
+ví dụ nút nổi trên trình phát video, dùng `LiquidGlassLayout`:
+
+```xml
+<vn.minh_nguyen.vkey.liquid.ui.LiquidGlassLayout
+    android:layout_width="40dp"
+    android:layout_height="40dp">
+
+    <ImageView
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:layout_gravity="center"
+        android:src="@drawable/ic_star" />
+</vn.minh_nguyen.vkey.liquid.ui.LiquidGlassLayout>
+```
+
+Lớp kính gồm, từ dưới lên: nền phía sau đã làm mờ (đậm màu hơn 40 %, bị **bẻ cong ở mép** như
+thấu kính) → nền màu → ánh trượt trên mặt kính → viền sáng theo hướng đèn. Mặc định bo tròn hai
+đầu (view vuông ra hình tròn), content bên trong được cắt theo hình kính.
+
+| Attribute | Kiểu | Mặc định | Mô tả |
+|--------------------|-----------|---------------|-----------------------------------------------------------------------------------------|
+| `lgl_color` | color | `#4D171717` | Màu nền kính kèm độ mờ. |
+| `lgl_cornerRadius` | dimension | bo tròn hai đầu | Bán kính bo; không khai thì tròn / pill. |
+| `lgl_rimWidth` | dimension | `1dp` | Độ dày viền sáng. |
+| `lgl_rimColor` | color | trắng | Màu viền sáng và ánh trượt. |
+| `lgl_rimAlpha` | float | `0.55` | Độ sáng lớn nhất của viền ở phía nguồn sáng. |
+| `lgl_lightAngle` | float | `225` | Hướng nguồn sáng, độ: 0 = phải, tăng theo chiều kim đồng hồ (225 = trên trái). |
+| `lgl_sheenAlpha` | float | `0.16` | Độ sáng ánh trượt trên mặt kính; `0` = tắt. |
+| `lgl_pressScale` | float | `0.92` | Tỉ lệ lún khi giữ (chỉ khi view `clickable`); `1` = không lún. |
+| `lgl_blur` | boolean | `true` | Làm mờ nền phía sau. Tắt thì chỉ còn nền màu + viền. |
+| `lgl_refraction` | float | `0.8` | Độ bẻ cong nền ở mép: mép với tới vành nền ngoài nút bằng chừng này lần bán kính; `0` = tắt. |
+
+Mỗi attribute có property tương ứng trong code: `glassColor`, `cornerRadius`, `rimWidth`,
+`rimColor`, `rimAlpha`, `lightAngle`, `sheenAlpha`, `pressScale`, `blurEnabled`, `refraction`.
+
+**Nền được lấy từ đâu.** View tự tìm trong cửa sổ các nguồn nền đang hiện, không cần nối tay:
+
+- `TextureView` có hình (video) — đọc bằng `getBitmap`. Với Media3 / ExoPlayer nhớ đặt
+  `app:surface_type="texture_view"`; `SurfaceView` **không** chụp lại được.
+- `ImageView` phủ ít nhất nửa cửa sổ (ảnh bìa, ảnh nền). Ảnh là bitmap phần cứng (Glide mặc định
+  từ Android 8) thì Canvas thường không vẽ được, nguồn đó bị bỏ qua — cần thì tải ảnh với
+  `.disallowHardwareConfig()`.
+
+Phép thu nhỏ / dịch chuyển / cuộn của nguồn nền (video đang pinch, trang đang vuốt) đều được tính.
+Không tìm thấy nguồn nào thì nút chỉ vẽ nền màu + viền.
+
+**Chi phí.** Cả cửa sổ dùng chung một ảnh nền (`GlassBackdrop`) chụp ở cỡ 1/6, tối đa ~30 lần /
+giây, chỉ khi có lượt vẽ mới (video dừng thì không chụp). Chỉnh độ mờ bằng `GlassBackdrop.SCALE`
+và bán kính làm mờ trong `GlassBackdrop.kt`.
+
 ## Đổi mặc định cho cả app
 
 Khai lại resource **cùng tên** trong app là ghi đè được default của library (resource của app
@@ -151,8 +204,9 @@ luôn thắng resource của thư viện):
 
 ## Lưu ý
 
-- View **không blur nội dung phía sau**. Nó chỉ phủ một lớp màu mờ + vẽ vệt sáng bằng `Canvas`,
-  nhờ vậy nhẹ và dùng được ở mọi nơi. Muốn blur backdrop thật thì bọc một `BlurView`
+- `LiquidGlassView` **không blur nội dung phía sau**. Nó chỉ phủ một lớp màu mờ + vẽ vệt sáng bằng
+  `Canvas`, nhờ vậy nhẹ và dùng được ở mọi nơi. Muốn blur backdrop thật trên video / ảnh thì dùng
+  `LiquidGlassLayout` (mục trên); trên giao diện thường thì bọc một `BlurView`
   (`eightbitlab:blurview`) bên ngoài rồi để `LiquidGlassView` bên trong nó.
 - Quầng sáng loang **vào trong**, không phải `BlurMaskFilter` — vì mask filter không chạy trên
   canvas hardware-accelerated, muốn có phải bật software layer (rất tốn khi cuộn list).

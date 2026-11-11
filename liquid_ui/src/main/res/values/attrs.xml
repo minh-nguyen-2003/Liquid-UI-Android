@@ -19,4 +19,27 @@
             <enum name="top_right_bottom_left" value="3" />
         </attr>
     </declare-styleable>
+
+    <!-- Nút kính có blur nền thật + khúc xạ ở mép (đặt trên video / ảnh) — xem LiquidGlassLayout -->
+    <declare-styleable name="LiquidGlassLayout">
+        <!-- Màu nền kính kèm độ mờ; mặc định #171717 30 % -->
+        <attr name="lgl_color" format="color" />
+        <!-- Bo góc; không khai = bo tròn hai đầu (hình tròn khi vuông) -->
+        <attr name="lgl_cornerRadius" format="dimension" />
+        <!-- Độ dày viền sáng; mặc định 1dp -->
+        <attr name="lgl_rimWidth" format="dimension" />
+        <attr name="lgl_rimColor" format="color" />
+        <!-- Độ sáng lớn nhất của viền ở phía nguồn sáng, 0..1; mặc định 0.55 -->
+        <attr name="lgl_rimAlpha" format="float" />
+        <!-- Hướng nguồn sáng, độ: 0 = phải, tăng theo chiều kim đồng hồ; mặc định 225 (trên trái) -->
+        <attr name="lgl_lightAngle" format="float" />
+        <!-- Độ sáng ánh trượt trên mặt kính, 0..1 (0 = tắt); mặc định 0.16 -->
+        <attr name="lgl_sheenAlpha" format="float" />
+        <!-- Tỉ lệ thu nhỏ khi giữ (1 = không lún); chỉ có tác dụng khi view clickable; mặc định 0.92 -->
+        <attr name="lgl_pressScale" format="float" />
+        <!-- Làm mờ video (TextureView) / ảnh phủ màn phía sau; mặc định true -->
+        <attr name="lgl_blur" format="boolean" />
+        <!-- Độ bẻ cong nền mờ ở mép kính (khúc xạ): mép với tới vành nền ngoài nút bằng chừng này lần bán kính; 0 = tắt; mặc định 0.8 -->
+        <attr name="lgl_refraction" format="float" />
+    </declare-styleable>
 </resources>
