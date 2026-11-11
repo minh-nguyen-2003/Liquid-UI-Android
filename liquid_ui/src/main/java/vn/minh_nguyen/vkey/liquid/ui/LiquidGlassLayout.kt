@@ -21,12 +21,15 @@ import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import androidx.annotation.ColorInt
 import androidx.core.graphics.ColorUtils
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.cos
+import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
+import kotlin.math.sign
 import kotlin.math.sin
 
 /**
@@ -121,14 +124,22 @@ class LiquidGlassLayout @JvmOverloads constructor(
         }
 
     /**
-     * Mảnh nền riêng của nút cho chế độ bẻ cong: phần ảnh nền mờ quanh nút (rộng hơn nút một vành [refraction]), chép lại từ ảnh nền dùng
-     * chung trước mỗi lượt vẽ rồi vẽ qua lưới [MESH] x [MESH] có các đỉnh dồn về phía tâm.
+     * Mảnh nền riêng của nút cho chế độ bẻ cong: ảnh nhỏ 1/[LENS_SCALE] cỡ nút, mỗi điểm ảnh lấy màu từ ảnh nền dùng chung tại vị trí đã
+     * khúc xạ ([lensSourceX] / [lensSourceY], tính sẵn theo hình kính — tròn, pill hay chữ nhật bo góc) rồi phóng lại lên nút. Bảng vị trí
+     * chỉ tính lại khi nút đổi cỡ / đổi chỗ; mỗi khung hình nền mới chỉ lấy mẫu lại màu.
      */
     private var lens: Bitmap? = null
-    private var lensCanvas: Canvas? = null
-    private var lensCropX = 0
-    private var lensCropY = 0
-    private val lensVertices = FloatArray((MESH + 1) * (MESH + 1) * 2)
+    private var lensPixels = IntArray(0)
+    private var lensSourceX = FloatArray(0)
+    private var lensSourceY = FloatArray(0)
+
+    /** Vùng của ảnh nền mà mảnh nền cần đọc (đã cắt trong ảnh nền) và bộ đệm điểm ảnh của vùng đó. */
+    private var regionLeft = 0
+    private var regionTop = 0
+    private var regionWidth = 0
+    private var regionHeight = 0
+    private var regionPixels = IntArray(0)
+    private val lensBounds = RectF()
 
     /** Ảnh nền mờ vẽ đậm màu hơn (như kính iOS) và phóng to nhẹ quanh tâm nút cho cảm giác thấu kính. */
     private val backdropPaint = Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG).apply {
@@ -155,17 +166,48 @@ class LiquidGlassLayout @JvmOverloads constructor(
             if (windowLocation[0] != drawnX || windowLocation[1] != drawnY || current !== drawnBackdrop) {
                 invalidate()
             } else if (current != null && refraction > 0f) {
-                // Nút đứng yên: chỉ cần chép khung hình nền mới vào mảnh nền của nút
-                copyLens(current)
+                // Nút đứng yên: chỉ cần lấy mẫu lại màu từ khung hình nền mới
+                renderLens(current)
             }
         }
         true
     }
 
-    private fun copyLens(backdrop: Bitmap) {
-        val canvas = lensCanvas ?: return
-        canvas.drawColor(Color.BLACK)
-        canvas.drawBitmap(backdrop, -lensCropX.toFloat(), -lensCropY.toFloat(), null)
+    /**
+     * Tô lại mảnh nền từ [backdrop]: mỗi điểm ảnh lấy màu nội suy song tuyến tính tại vị trí đã khúc xạ. Vị trí rơi ngoài ảnh nền thì lấy
+     * điểm biên gần nhất.
+     */
+    private fun renderLens(backdrop: Bitmap) {
+        val lens = lens ?: return
+        val width = regionWidth
+        val height = regionHeight
+        if (width <= 0 || height <= 0 || regionLeft + width > backdrop.width || regionTop + height > backdrop.height) return
+        backdrop.getPixels(regionPixels, 0, width, regionLeft, regionTop, width, height)
+        val maxX = (width - 1).toFloat()
+        val maxY = (height - 1).toFloat()
+        for (i in lensPixels.indices) {
+            val x = (lensSourceX[i] - regionLeft).coerceIn(0f, maxX)
+            val y = (lensSourceY[i] - regionTop).coerceIn(0f, maxY)
+            val x0 = x.toInt()
+            val y0 = y.toInt()
+            val x1 = min(x0 + 1, width - 1)
+            val y1 = min(y0 + 1, height - 1)
+            val tx = x - x0
+            val ty = y - y0
+            val c00 = regionPixels[y0 * width + x0]
+            val c10 = regionPixels[y0 * width + x1]
+            val c01 = regionPixels[y1 * width + x0]
+            val c11 = regionPixels[y1 * width + x1]
+            val w00 = (1f - tx) * (1f - ty)
+            val w10 = tx * (1f - ty)
+            val w01 = (1f - tx) * ty
+            val w11 = tx * ty
+            val r = ((c00 shr 16) and 0xFF) * w00 + ((c10 shr 16) and 0xFF) * w10 + ((c01 shr 16) and 0xFF) * w01 + ((c11 shr 16) and 0xFF) * w11
+            val g = ((c00 shr 8) and 0xFF) * w00 + ((c10 shr 8) and 0xFF) * w10 + ((c01 shr 8) and 0xFF) * w01 + ((c11 shr 8) and 0xFF) * w11
+            val b = (c00 and 0xFF) * w00 + (c10 and 0xFF) * w10 + (c01 and 0xFF) * w01 + (c11 and 0xFF) * w11
+            lensPixels[i] = (0xFF shl 24) or (r.toInt() shl 16) or (g.toInt() shl 8) or b.toInt()
+        }
+        lens.setPixels(lensPixels, 0, lens.width, 0, 0, lens.width, lens.height)
     }
 
     private val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
@@ -307,58 +349,90 @@ class LiquidGlassLayout @JvmOverloads constructor(
     }
 
     /**
-     * Nền mờ bị bẻ cong ở mép. Điểm trên nút cách tâm d (0 = tâm, 1 = mép, theo nửa rộng / nửa cao) hiện phần nền cách tâm
-     * `d · (1 + refraction · d^REFRACTION_POWER) / BACKDROP_ZOOM`: giữa nút chỉ phóng nhẹ, sát mép thì lấy cả vành nền bên ngoài nút dồn
-     * vào. Vẽ bằng `drawBitmapMesh`: mỗi đỉnh lưới của mảnh nền (vị trí gốc s) được đặt về vị trí d tương ứng (giải ngược hàm trên).
+     * Nền mờ bị bẻ cong ở mép, đúng theo hình kính (tròn, pill hay chữ nhật bo góc). Với mỗi điểm p trên nút:
+     * - d = độ gần mép: 0 ở sâu trong nút nhất, 1 ở mép, đo bằng khoảng cách tới mép của hình chữ nhật bo góc;
+     * - n = hướng vuông góc với mép gần nhất, chỉ ra ngoài;
+     * - phần nền hiện tại p nằm ở `tâm + (p − tâm) / BACKDROP_ZOOM + n · R · refraction · d^(REFRACTION_POWER + 1) / BACKDROP_ZOOM`
+     *   (R = nửa cạnh ngắn): giữa nút chỉ phóng nhẹ, sát mép thì lấy cả vành nền bên ngoài nút dồn vào.
+     * Trường khúc xạ dùng bo góc không nhỏ hơn [LENS_MIN_ROUND] · R để hướng n đổi mượt quanh góc (nút bo góc nhỏ không bị gãy nếp ở góc).
+     * Với nút tròn, công thức này trùng với thấu kính tròn.
      */
     private fun drawRefracted(canvas: Canvas, backdrop: Bitmap, width: Float, height: Float) {
-        val scale = GlassBackdrop.SCALE
-        val x = drawnX - rootLocation[0]
-        val y = drawnY - rootLocation[1]
-        // Vành nền ngoài nút mà mép kính với tới
-        val reach = ((1f + refraction) / BACKDROP_ZOOM - 1f).coerceAtLeast(0f) * max(width, height) / 2f
-        val margin = ceil(reach / scale).toInt() + 2
-        val lensWidth = ceil(width / scale).toInt() + margin * 2 + 1
-        val lensHeight = ceil(height / scale).toInt() + margin * 2 + 1
+        val lensWidth = ceil(width / LENS_SCALE).toInt().coerceAtLeast(1)
+        val lensHeight = ceil(height / LENS_SCALE).toInt().coerceAtLeast(1)
         var lens = lens
         if (lens == null || lens.width != lensWidth || lens.height != lensHeight) {
             lens = Bitmap.createBitmap(lensWidth, lensHeight, Bitmap.Config.ARGB_8888)
             this.lens = lens
-            lensCanvas = Canvas(lens)
+            lensPixels = IntArray(lensWidth * lensHeight)
+            lensSourceX = FloatArray(lensWidth * lensHeight)
+            lensSourceY = FloatArray(lensWidth * lensHeight)
         }
-        lensCropX = x.floorDiv(scale) - margin
-        lensCropY = y.floorDiv(scale) - margin
-        copyLens(backdrop)
-
+        val scale = GlassBackdrop.SCALE.toFloat()
+        val originX = (drawnX - rootLocation[0]).toFloat()
+        val originY = (drawnY - rootLocation[1]).toFloat()
         val centerX = width / 2f
         val centerY = height / 2f
+        val inradius = min(centerX, centerY)
+        val lensRadius = max(resolvedRadius(width, height), inradius * LENS_MIN_ROUND)
+        val coreX = centerX - lensRadius
+        val coreY = centerY - lensRadius
+        var minX = Float.MAX_VALUE
+        var minY = Float.MAX_VALUE
+        var maxX = -Float.MAX_VALUE
+        var maxY = -Float.MAX_VALUE
         var index = 0
-        for (row in 0..MESH) {
-            // Vị trí gốc của đỉnh lưới, tính trong toạ độ của nút
-            val sourceY = (lensCropY + lensHeight * row / MESH.toFloat()) * scale - y
-            for (column in 0..MESH) {
-                val sourceX = (lensCropX + lensWidth * column / MESH.toFloat()) * scale - x
-                val offsetX = sourceX - centerX
-                val offsetY = sourceY - centerY
-                val source = hypot(offsetX / centerX, offsetY / centerY)
-                val ratio = if (source > 1e-4f) lensDistance(source) / source else BACKDROP_ZOOM
-                lensVertices[index++] = centerX + offsetX * ratio
-                lensVertices[index++] = centerY + offsetY * ratio
+        for (row in 0 until lensHeight) {
+            val offsetY = (row + 0.5f) * height / lensHeight - centerY
+            for (column in 0 until lensWidth) {
+                val offsetX = (column + 0.5f) * width / lensWidth - centerX
+                // Khoảng cách có dấu tới mép hình chữ nhật bo góc (âm = bên trong) và hướng ra mép gần nhất
+                val edgeX = abs(offsetX) - coreX
+                val edgeY = abs(offsetY) - coreY
+                val distance: Float
+                var normalX = 0f
+                var normalY = 0f
+                if (edgeX > 0f && edgeY > 0f) {
+                    val length = hypot(edgeX, edgeY)
+                    distance = length - lensRadius
+                    normalX = edgeX / length * sign(offsetX)
+                    normalY = edgeY / length * sign(offsetY)
+                } else if (edgeX > edgeY) {
+                    distance = edgeX - lensRadius
+                    normalX = sign(offsetX)
+                } else {
+                    distance = edgeY - lensRadius
+                    normalY = sign(offsetY)
+                }
+                val depth = (1f + distance / inradius).coerceAtLeast(0f)
+                val shift = inradius * refraction * depth.pow(REFRACTION_POWER + 1f) / BACKDROP_ZOOM
+                val sourceX = centerX + offsetX / BACKDROP_ZOOM + normalX * shift
+                val sourceY = centerY + offsetY / BACKDROP_ZOOM + normalY * shift
+                // Sang toạ độ điểm ảnh của ảnh nền (tâm điểm ảnh lệch nửa ô)
+                val backdropX = (originX + sourceX) / scale - 0.5f
+                val backdropY = (originY + sourceY) / scale - 0.5f
+                lensSourceX[index] = backdropX
+                lensSourceY[index] = backdropY
+                index++
+                if (backdropX < minX) minX = backdropX
+                if (backdropX > maxX) maxX = backdropX
+                if (backdropY < minY) minY = backdropY
+                if (backdropY > maxY) maxY = backdropY
             }
         }
-        canvas.drawBitmapMesh(lens, MESH, MESH, lensVertices, 0, null, 0, backdropPaint)
-    }
-
-    /** Khoảng cách d trên nút hiện phần nền ở khoảng cách [source]: giải `d · (1 + refraction · d^n) / zoom = source` bằng chia đôi. */
-    private fun lensDistance(source: Float): Float {
-        var low = 0f
-        var high = LENS_MAX_DISTANCE
-        repeat(LENS_SOLVE_STEPS) {
-            val middle = (low + high) / 2f
-            val value = middle * (1f + refraction * middle.pow(REFRACTION_POWER)) / BACKDROP_ZOOM
-            if (value < source) low = middle else high = middle
-        }
-        return (low + high) / 2f
+        // Vùng ảnh nền cần đọc, cắt trong ảnh nền (nút nằm sát mép màn thì phần ngoài lấy điểm biên)
+        val left = floor(minX).toInt().coerceIn(0, backdrop.width - 1)
+        val top = floor(minY).toInt().coerceIn(0, backdrop.height - 1)
+        val right = (floor(maxX).toInt() + 1).coerceIn(left, backdrop.width - 1)
+        val bottom = (floor(maxY).toInt() + 1).coerceIn(top, backdrop.height - 1)
+        regionLeft = left
+        regionTop = top
+        regionWidth = right - left + 1
+        regionHeight = bottom - top + 1
+        if (regionPixels.size < regionWidth * regionHeight) regionPixels = IntArray(regionWidth * regionHeight)
+        renderLens(backdrop)
+        lensBounds.set(0f, 0f, width, height)
+        canvas.drawBitmap(lens, null, lensBounds, backdropPaint)
     }
 
     override fun onAttachedToWindow() {
@@ -410,10 +484,11 @@ class LiquidGlassLayout @JvmOverloads constructor(
         const val DEFAULT_REFRACTION = 0.8f
         const val REFRACTION_POWER = 3f
 
-        /** Lưới vẽ mảnh nền bẻ cong 20 x 20 ô; giải ngược hàm thấu kính trong khoảng 0..3 lần bán kính bằng 24 bước chia đôi. */
-        const val MESH = 20
-        const val LENS_MAX_DISTANCE = 3f
-        const val LENS_SOLVE_STEPS = 24
+        /** Mảnh nền bẻ cong nhỏ hơn nút 3 lần mỗi chiều (nút 40dp ≈ 40 x 40 điểm ảnh, lấy mẫu lại mỗi khung hình nền). */
+        const val LENS_SCALE = 3f
+
+        /** Trường khúc xạ bo góc ít nhất 60 % nửa cạnh ngắn, để hướng bẻ cong đổi mượt quanh góc của nút bo góc nhỏ. */
+        const val LENS_MIN_ROUND = 0.6f
 
         const val PRESS_MS = 110L
         const val RELEASE_MS = 320L

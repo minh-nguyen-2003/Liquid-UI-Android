@@ -186,6 +186,10 @@ Không tìm thấy nguồn nào thì nút chỉ vẽ nền màu + viền.
 giây, chỉ khi có lượt vẽ mới (video dừng thì không chụp). Chỉnh độ mờ bằng `GlassBackdrop.SCALE`
 và bán kính làm mờ trong `GlassBackdrop.kt`.
 
+**Khúc xạ theo hình kính.** Phần bẻ cong ở mép tính theo đúng hình của view — tròn, pill hay chữ
+nhật bo góc (`lgl_cornerRadius` nhỏ cũng được): nền bị kéo cong vuông góc với mép gần nhất, bốn
+góc không bị bỏ trống.
+
 ## Đổi mặc định cho cả app
 
 Khai lại resource **cùng tên** trong app là ghi đè được default của library (resource của app
