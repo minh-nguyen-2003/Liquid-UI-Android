@@ -46,7 +46,7 @@ afterEvaluate {
                 from(components["release"])
                 groupId = "com.github.minh-nguyen-2003"
                 artifactId = "liquid-ui"
-                version = "1.0.4"
+                version = "1.0.5"
             }
         }
     }
