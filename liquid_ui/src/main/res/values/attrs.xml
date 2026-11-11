@@ -26,8 +26,15 @@
         <attr name="gl_color" format="color" />
         <!-- Bo góc; không khai = bo tròn hai đầu (hình tròn khi vuông) -->
         <attr name="gl_cornerRadius" format="dimension" />
-        <!-- Làm mờ video (TextureView) / ảnh phủ màn phía sau; mặc định true -->
+        <!-- Làm mờ nội dung phía sau; mặc định true -->
         <attr name="gl_blur" format="boolean" />
+        <!-- Làm mờ những gì phía sau. Giá trị enum phải khớp hằng số trong GlassBackdropMode -->
+        <attr name="gl_backdrop">
+            <!-- Mọi thứ đang hiện: giao diện thường lẫn video (mặc định) -->
+            <enum name="all" value="0" />
+            <!-- Chỉ video (TextureView) và ảnh phủ ít nhất nửa cửa sổ; nhẹ hơn -->
+            <enum name="media" value="1" />
+        </attr>
     </declare-styleable>
 
     <!-- Kính làm mờ + bẻ cong nền ở mép (kể cả video), không có viền sáng kiểu liquid — xem GlassLensLayout. Dùng thêm được gl_* -->
@@ -53,7 +60,7 @@
         <attr name="lgl_sheenAlpha" format="float" />
         <!-- Tỉ lệ thu nhỏ khi giữ (1 = không lún); chỉ có tác dụng khi view clickable; mặc định 0.92 -->
         <attr name="lgl_pressScale" format="float" />
-        <!-- Làm mờ video (TextureView) / ảnh phủ màn phía sau; mặc định true -->
+        <!-- Làm mờ nội dung phía sau; mặc định true -->
         <attr name="lgl_blur" format="boolean" />
         <!-- Độ bẻ cong nền mờ ở mép kính (khúc xạ): mép với tới vành nền ngoài nút bằng chừng này lần bán kính; 0 = tắt; mặc định 0.8 -->
         <attr name="lgl_refraction" format="float" />

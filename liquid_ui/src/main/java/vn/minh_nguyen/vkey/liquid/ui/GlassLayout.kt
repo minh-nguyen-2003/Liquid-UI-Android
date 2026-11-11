@@ -25,15 +25,18 @@ import kotlin.math.pow
 import kotlin.math.sign
 
 /**
- * Khung kính chỉ làm mờ ("glass", không có viền sáng / ánh trượt kiểu liquid): làm mờ thật nội dung phía sau — kể cả video — rồi phủ một
- * lớp màu [glassColor]. Dùng như `FrameLayout`, content đặt bên trong và được cắt theo hình kính.
+ * Khung kính chỉ làm mờ ("glass", không có viền sáng / ánh trượt kiểu liquid): làm mờ thật mọi thứ phía sau như kính iOS — giao diện
+ * thường (danh sách, chữ, ảnh) lẫn video — rồi phủ một lớp màu [glassColor]. Dùng như `FrameLayout`, content đặt bên trong và được cắt
+ * theo hình kính.
  *
- * Nền phía sau lấy qua [GlassBackdrop]: video phải vẽ bằng `TextureView` (Media3: `app:surface_type="texture_view"`), ảnh là `ImageView`
- * phủ ít nhất nửa cửa sổ. Không tìm thấy nguồn nền thì chỉ còn lớp màu.
+ * Nền phía sau lấy qua [GlassBackdrop], theo [backdropMode]: mặc định mọi thứ đang hiện trong cửa sổ; [GlassBackdropMode.MEDIA] thì chỉ
+ * video và ảnh phủ màn (nhẹ hơn). Video phải vẽ bằng `TextureView` (Media3: `app:surface_type="texture_view"`). View kính nằm trong hộp
+ * thoại / popup thì đặt [backdropRoot] là nội dung của màn phía sau. Ảnh là bitmap phần cứng không vẽ lại được vào nền (Glide: tải với
+ * `disallowHardwareConfig()`).
  *
  * Bo góc theo [cornerRadius]; âm (mặc định) = bo tròn hai đầu theo nửa cạnh ngắn (hình tròn khi vuông).
  *
- * XML: `app:gl_color`, `app:gl_cornerRadius`, `app:gl_blur`.
+ * XML: `app:gl_color`, `app:gl_cornerRadius`, `app:gl_blur`, `app:gl_backdrop`.
  *
  * Lớp con: [GlassLensLayout] thêm bẻ cong nền ở mép (khúc xạ); [LiquidGlassLayout] thêm tiếp viền sáng + ánh trượt kiểu liquid.
  */
@@ -58,8 +61,29 @@ open class GlassLayout @JvmOverloads constructor(
             invalidate()
         }
 
-    /** Làm mờ nội dung phía sau (video, ảnh phủ màn) qua [GlassBackdrop]; tắt thì chỉ còn lớp màu. */
+    /** Làm mờ nội dung phía sau qua [GlassBackdrop]; tắt thì chỉ còn lớp màu. */
     var blurEnabled: Boolean = true
+        set(value) {
+            field = value
+            invalidate()
+        }
+
+    /**
+     * Làm mờ những gì phía sau: [GlassBackdropMode.ALL] (mặc định) = mọi thứ đang hiện, cả giao diện thường lẫn video;
+     * [GlassBackdropMode.MEDIA] = chỉ video và ảnh phủ màn (nhẹ hơn).
+     */
+    var backdropMode: Int = GlassBackdropMode.ALL
+        set(value) {
+            field = value
+            invalidate()
+        }
+
+    /**
+     * Gốc của phần nội dung cần làm mờ; `null` (mặc định) = gốc cửa sổ chứa view này. View kính nằm trong cửa sổ khác với nội dung phía
+     * sau (hộp thoại, bottom sheet, popup) thì đặt gốc là view nội dung của màn phía sau, vd
+     * `activity.findViewById(android.R.id.content)`.
+     */
+    var backdropRoot: View? = null
         set(value) {
             field = value
             invalidate()
@@ -126,9 +150,10 @@ open class GlassLayout @JvmOverloads constructor(
      */
     private val preDrawListener = ViewTreeObserver.OnPreDrawListener {
         if (blurEnabled && isShown) {
-            val backdrop = GlassBackdrop.of(rootView)
-            backdrop.update(rootView)
-            getLocationInWindow(windowLocation)
+            val root = backdropRoot ?: rootView
+            val backdrop = GlassBackdrop.of(root)
+            backdrop.update(root, all = backdropMode == GlassBackdropMode.ALL)
+            getLocationOnScreen(windowLocation)
             val current = backdrop.bitmap?.takeIf { backdrop.hasContent }
             if (windowLocation[0] != drawnX || windowLocation[1] != drawnY || current !== drawnBackdrop) {
                 invalidate()
@@ -146,6 +171,7 @@ open class GlassLayout @JvmOverloads constructor(
             glassColor = values.getColor(R.styleable.GlassLayout_gl_color, glassColor)
             cornerRadius = values.getDimension(R.styleable.GlassLayout_gl_cornerRadius, cornerRadius)
             blurEnabled = values.getBoolean(R.styleable.GlassLayout_gl_blur, blurEnabled)
+            backdropMode = values.getInt(R.styleable.GlassLayout_gl_backdrop, backdropMode)
             values.recycle()
         }
         fillPaint.color = glassColor
@@ -163,6 +189,12 @@ open class GlassLayout @JvmOverloads constructor(
     protected fun resolvedRadius(width: Float, height: Float): Float {
         val pill = min(width, height) / 2f
         return if (cornerRadius < 0f) pill else min(cornerRadius, pill)
+    }
+
+    /** Đang chụp ảnh nền ([GlassBackdrop.CaptureCanvas]): không vẽ gì, để view kính và content của nó không lẫn vào nền của chính nó. */
+    override fun draw(canvas: Canvas) {
+        if (canvas is GlassBackdrop.CaptureCanvas) return
+        super.draw(canvas)
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -185,16 +217,17 @@ open class GlassLayout @JvmOverloads constructor(
      * View đã cắt theo hình kính (clipToOutline). Chưa có ảnh nền thì bỏ qua.
      */
     private fun drawBackdrop(canvas: Canvas, width: Float, height: Float) {
-        getLocationInWindow(windowLocation)
+        // Vị trí tính theo màn hình để gốc nền ở cửa sổ khác (màn phía sau hộp thoại) vẫn khớp
+        getLocationOnScreen(windowLocation)
         drawnX = windowLocation[0]
         drawnY = windowLocation[1]
         drawnBackdrop = null
         if (!blurEnabled || !isAttachedToWindow) return
-        val root = rootView
+        val root = backdropRoot ?: rootView
         val backdrop = GlassBackdrop.of(root)
         val bitmap = backdrop.bitmap?.takeIf { backdrop.hasContent } ?: return
         drawnBackdrop = bitmap
-        root.getLocationInWindow(rootLocation)
+        root.getLocationOnScreen(rootLocation)
         if (refraction > 0f) {
             drawRefracted(canvas, bitmap, width, height)
             return

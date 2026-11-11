@@ -171,6 +171,7 @@ Chỉ cần lớp kính mờ (thanh điều khiển, nhãn, khung chữ nổi tr
 | `gl_color` | cả hai | color | `#4D171717` | Màu phủ trên nền đã làm mờ, kèm độ mờ. |
 | `gl_cornerRadius` | cả hai | dimension | bo tròn hai đầu | Bán kính bo; không khai thì tròn / pill. |
 | `gl_blur` | cả hai | boolean | `true` | Làm mờ nền phía sau. Tắt thì chỉ còn lớp màu. |
+| `gl_backdrop` | cả hai | enum | `all` | `all`: làm mờ mọi thứ phía sau (giao diện + video). `media`: chỉ video và ảnh phủ màn, nhẹ hơn. |
 | `gll_refraction` | `GlassLensLayout` | float | `0.8` | Độ bẻ cong nền ở mép; `0` = tắt. |
 
 `GlassLayout` giữ nguyên màu và cỡ của nền (chỉ mờ đi). `GlassLensLayout` phóng nền 12 % quanh tâm
@@ -216,19 +217,38 @@ thấu kính) → nền màu → ánh trượt trên mặt kính → viền sán
 Mỗi attribute có property tương ứng trong code: `glassColor`, `cornerRadius`, `rimWidth`,
 `rimColor`, `rimAlpha`, `lightAngle`, `sheenAlpha`, `pressScale`, `blurEnabled`, `refraction`.
 
-**Nền được lấy từ đâu.** View tự tìm trong cửa sổ các nguồn nền đang hiện, không cần nối tay:
+**Nền được lấy từ đâu.** View tự chụp phần nằm sau nó, không cần nối tay. Thuộc tính `gl_backdrop`
+(dùng được cho cả `GlassLayout`, `GlassLensLayout`, `LiquidGlassLayout`; trong code là
+`backdropMode`) chọn chụp gì:
 
-- `TextureView` có hình (video) — đọc bằng `getBitmap`. Với Media3 / ExoPlayer nhớ đặt
-  `app:surface_type="texture_view"`; `SurfaceView` **không** chụp lại được.
-- `ImageView` phủ ít nhất nửa cửa sổ (ảnh bìa, ảnh nền). Ảnh là bitmap phần cứng (Glide mặc định
-  từ Android 8) thì Canvas thường không vẽ được, nguồn đó bị bỏ qua — cần thì tải ảnh với
-  `.disallowHardwareConfig()`.
+- `all` (mặc định, giống kính iOS): **mọi thứ đang hiện** trong cửa sổ — danh sách, chữ, ảnh, nút —
+  và cả video. Giao diện thường được vẽ lại vào ảnh nền; khung hình video đọc riêng rồi ghép đúng
+  vị trí, đúng thứ tự trên / dưới. Các view kính không lẫn vào nền của nhau.
+- `media`: chỉ video và `ImageView` phủ ít nhất nửa cửa sổ. Nhẹ hơn nhiều vì không vẽ lại cả cây
+  view — hợp với nút nổi trên trình phát video khi cần chạy mượt trên máy yếu. Không có nguồn nào
+  thì view chỉ còn lớp màu + viền.
 
-Phép thu nhỏ / dịch chuyển / cuộn của nguồn nền (video đang pinch, trang đang vuốt) đều được tính.
-Không tìm thấy nguồn nào thì nút chỉ vẽ nền màu + viền.
+Lưu ý chung:
+
+- Video phải vẽ bằng `TextureView` — với Media3 / ExoPlayer đặt `app:surface_type="texture_view"`.
+  `SurfaceView` **không** chụp lại được.
+- Ảnh là bitmap phần cứng (Glide mặc định từ Android 8) không vẽ lại được vào ảnh nền, nhánh view
+  chứa nó bị bỏ qua — tải ảnh với `.disallowHardwareConfig()`.
+- Phép thu nhỏ / dịch chuyển / cuộn của nội dung phía sau (video đang pinch, trang đang vuốt) đều
+  được tính.
+- Có một view xin `all` là cả cửa sổ chụp ở chế độ `all`.
+
+**View kính trong hộp thoại / popup.** Hộp thoại là cửa sổ riêng nên mặc định view chỉ thấy nội
+dung của chính hộp thoại. Muốn làm mờ màn phía sau thì chỉ gốc nền:
+
+```kotlin
+  glass.backdropRoot = requireActivity().findViewById(android.R.id.content)
+```
 
 **Chi phí.** Cả cửa sổ dùng chung một ảnh nền (`GlassBackdrop`) chụp ở cỡ 1/6, tối đa ~30 lần /
-giây, chỉ khi có lượt vẽ mới (video dừng thì không chụp). Chỉnh độ mờ bằng `GlassBackdrop.SCALE`
+giây, chỉ khi có lượt vẽ mới (màn hình đứng yên thì không chụp). Chế độ `all` vẽ lại cả cây view
+mỗi lần chụp nên nặng hơn `media`; thấy giật trên máy yếu thì chuyển các view trên video sang
+`media`. Chỉnh độ mờ bằng `GlassBackdrop.SCALE`
 và bán kính làm mờ trong `GlassBackdrop.kt`.
 
 **Khúc xạ theo hình kính.** Phần bẻ cong ở mép tính theo đúng hình của view — tròn, pill hay chữ
