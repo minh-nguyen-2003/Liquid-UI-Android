@@ -1,7 +1,7 @@
 package vn.minh_nguyen.vkey.liquid.ui
 
 /**
- * Hướng nguồn sáng của [LiquidGlassView] — thuần Kotlin (không import `android.*`) để unit test
+ * Hướng nguồn sáng của [LiquidLayout] — thuần Kotlin (không import `android.*`) để unit test
  * được trên JVM.
  *
  * Giá trị 0..3 PHẢI khớp enum `lgv_highlightOrientation` trong `attrs.xml`; đổi số ở đây là hỏng

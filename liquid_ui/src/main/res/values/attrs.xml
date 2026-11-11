@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Nền kính mờ + vệt sáng chạy theo mép — xem LiquidGlassView -->
-    <declare-styleable name="LiquidGlassView">
+    <!-- Nền kính mờ + vệt sáng chạy theo mép — xem LiquidLayout -->
+    <declare-styleable name="LiquidLayout">
         <attr name="lgv_backgroundColor" format="color" />
         <attr name="lgv_cornerRadius" format="dimension" />
         <!-- true: bán kính = nửa cạnh ngắn ⇒ view vuông ra hình tròn, view ngang ra pill -->

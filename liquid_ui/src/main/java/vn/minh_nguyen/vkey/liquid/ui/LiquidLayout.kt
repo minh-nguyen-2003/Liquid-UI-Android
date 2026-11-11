@@ -36,7 +36,7 @@ import androidx.core.content.ContextCompat
  *   backdrop thật thì bọc một `BlurView` bên ngoài (xem README), đừng gộp vào đây.
  * - Vệt sáng **không tự đảo chiều theo RTL**.
  */
-class LiquidGlassView @JvmOverloads constructor(
+class LiquidLayout @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : FrameLayout(context, attrs, defStyleAttr) {
 
@@ -135,35 +135,35 @@ class LiquidGlassView @JvmOverloads constructor(
         setWillNotDraw(false)
 
         val ta = context.obtainStyledAttributes(
-            attrs, R.styleable.LiquidGlassView, defStyleAttr, 0
+            attrs, R.styleable.LiquidLayout, defStyleAttr, 0
         )
         glassColor = ta.getColor(
-            R.styleable.LiquidGlassView_lgv_backgroundColor,
+            R.styleable.LiquidLayout_lgv_backgroundColor,
             ContextCompat.getColor(context, R.color.liquid_glass_background)
         )
         cornerRadius = ta.getDimension(
-            R.styleable.LiquidGlassView_lgv_cornerRadius,
+            R.styleable.LiquidLayout_lgv_cornerRadius,
             resources.getDimension(R.dimen.liquid_glass_corner_radius)
         )
-        isPill = ta.getBoolean(R.styleable.LiquidGlassView_lgv_pill, false)
+        isPill = ta.getBoolean(R.styleable.LiquidLayout_lgv_pill, false)
         highlightColor = ta.getColor(
-            R.styleable.LiquidGlassView_lgv_highlightColor,
+            R.styleable.LiquidLayout_lgv_highlightColor,
             ContextCompat.getColor(context, R.color.liquid_glass_highlight)
         )
         highlightWidth = ta.getDimension(
-            R.styleable.LiquidGlassView_lgv_highlightWidth,
+            R.styleable.LiquidLayout_lgv_highlightWidth,
             resources.getDimension(R.dimen.liquid_glass_highlight_width)
         )
         highlightAlpha = ta.getFloat(
-            R.styleable.LiquidGlassView_lgv_highlightAlpha,
+            R.styleable.LiquidLayout_lgv_highlightAlpha,
             DEFAULT_HIGHLIGHT_ALPHA
         )
         highlightOrientation = ta.getInt(
-            R.styleable.LiquidGlassView_lgv_highlightOrientation,
+            R.styleable.LiquidLayout_lgv_highlightOrientation,
             LiquidGlassOrientation.TOP_LEFT_BOTTOM_RIGHT
         )
-        isGlowEnabled = ta.getBoolean(R.styleable.LiquidGlassView_lgv_glow, true)
-        isClipContent = ta.getBoolean(R.styleable.LiquidGlassView_lgv_clipContent, true)
+        isGlowEnabled = ta.getBoolean(R.styleable.LiquidLayout_lgv_glow, true)
+        isClipContent = ta.getBoolean(R.styleable.LiquidLayout_lgv_clipContent, true)
         ta.recycle()
 
         refreshOutline()

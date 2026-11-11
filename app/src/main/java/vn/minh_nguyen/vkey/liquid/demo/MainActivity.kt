@@ -7,7 +7,7 @@ import android.widget.SeekBar
 import androidx.appcompat.app.AppCompatActivity
 import vn.minh_nguyen.vkey.liquid.demo.databinding.ActivityMainBinding
 import vn.minh_nguyen.vkey.liquid.ui.LiquidGlassOrientation
-import vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView
+import vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
 
 /**
  * Demo: layout khai toàn bộ bằng XML, Activity chỉ chỉnh vài thuộc tính lúc chạy để thấy
@@ -17,7 +17,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
 
-    /** Mọi LiquidGlassView trong màn — gom 1 lần để 3 control bên dưới chỉnh đồng loạt. */
+    /** Mọi LiquidLayout trong màn — gom 1 lần để 3 control bên dưới chỉnh đồng loạt. */
     private val glassViews by lazy { binding.glassRoot.collectGlassViews() }
 
     private var orientationIndex = 0
@@ -53,9 +53,9 @@ class MainActivity : AppCompatActivity() {
             getString(R.string.btn_orientation, ORIENTATIONS[orientationIndex].first)
     }
 
-    private fun View.collectGlassViews(): List<LiquidGlassView> {
-        val found = mutableListOf<LiquidGlassView>()
-        if (this is LiquidGlassView) found += this
+    private fun View.collectGlassViews(): List<LiquidLayout> {
+        val found = mutableListOf<LiquidLayout>()
+        if (this is LiquidLayout) found += this
         if (this is ViewGroup) {
             for (i in 0 until childCount) found += getChildAt(i).collectGlassViews()
         }

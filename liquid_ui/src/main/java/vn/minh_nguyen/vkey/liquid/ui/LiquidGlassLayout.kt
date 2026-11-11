@@ -33,7 +33,7 @@ import kotlin.math.sign
 import kotlin.math.sin
 
 /**
- * Nút / khung "liquid glass" có blur nền thật và khúc xạ ở mép (kiểu iOS), tự vẽ bằng Canvas. Khác [LiquidGlassView] (không blur, dùng
+ * Nút / khung "liquid glass" có blur nền thật và khúc xạ ở mép (kiểu iOS), tự vẽ bằng Canvas. Khác [LiquidLayout] (không blur, dùng
  * được mọi nơi): view này làm mờ video / ảnh phủ màn nằm sau nó nên hợp với nút nổi trên trình phát video. Lớp kính gồm, từ
  * dưới lên:
  * 0. nội dung phía sau làm mờ kiểu iOS ([blurEnabled]): video (TextureView) và ảnh bìa lấy qua [GlassBackdrop], đậm màu hơn và phóng nhẹ;

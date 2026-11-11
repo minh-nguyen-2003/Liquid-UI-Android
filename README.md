@@ -1,6 +1,6 @@
 # Liquid UI – Android Library
 
-**LiquidGlassView** là một `FrameLayout` vẽ sẵn nền kính "Liquid Glass": nền mờ + vệt sáng chạy
+**LiquidLayout** là một `FrameLayout` vẽ sẵn nền kính "Liquid Glass": nền mờ + vệt sáng chạy
 theo mép (bevel sáng/tối như kính thật) + quầng sáng mềm. Bọc content vào là có ngay giao diện
 liquid — không cần drawable, không cần `Activity`, dùng được cả trong item `RecyclerView`.
 
@@ -51,7 +51,7 @@ lấy đúng dòng.
 Khai trong XML, content đặt bên trong như `FrameLayout` thường:
 
 ```xml
-<vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView
+<vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
     android:layout_width="44dp"
     android:layout_height="44dp"
     app:lgv_pill="true">
@@ -61,7 +61,7 @@ Khai trong XML, content đặt bên trong như `FrameLayout` thường:
         android:layout_height="match_parent"
         android:padding="11dp"
         android:src="@drawable/ic_menu" />
-</vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView>
+</vn.minh_nguyen.vkey.liquid.ui.LiquidLayout>
 ```
 
 Không khai gì thêm thì mặc định đã ra kính: nền đen 20%, bo 12dp, vệt sáng trắng 1dp từ góc
@@ -127,7 +127,7 @@ Hoặc đổi nhiều thứ trong một lần — tham số nào bỏ trống th
 Tạo hoàn toàn bằng code cũng được (dùng như `FrameLayout`):
 
 ```kotlin
-  val glass = LiquidGlassView(context).apply {
+  val glass = LiquidLayout(context).apply {
       isPill = true
       addView(icon)
   }
@@ -135,7 +135,7 @@ Tạo hoàn toàn bằng code cũng được (dùng như `FrameLayout`):
 
 ## LiquidGlassLayout — kính có blur nền thật + khúc xạ
 
-`LiquidGlassView` ở trên không blur. Khi cần nút kính **làm mờ thật nội dung phía sau** (kiểu iOS),
+`LiquidLayout` ở trên không blur. Khi cần nút kính **làm mờ thật nội dung phía sau** (kiểu iOS),
 ví dụ nút nổi trên trình phát video, dùng `LiquidGlassLayout`:
 
 ```xml
@@ -208,10 +208,10 @@ luôn thắng resource của thư viện):
 
 ## Lưu ý
 
-- `LiquidGlassView` **không blur nội dung phía sau**. Nó chỉ phủ một lớp màu mờ + vẽ vệt sáng bằng
+- `LiquidLayout` **không blur nội dung phía sau**. Nó chỉ phủ một lớp màu mờ + vẽ vệt sáng bằng
   `Canvas`, nhờ vậy nhẹ và dùng được ở mọi nơi. Muốn blur backdrop thật trên video / ảnh thì dùng
   `LiquidGlassLayout` (mục trên); trên giao diện thường thì bọc một `BlurView`
-  (`eightbitlab:blurview`) bên ngoài rồi để `LiquidGlassView` bên trong nó.
+  (`eightbitlab:blurview`) bên ngoài rồi để `LiquidLayout` bên trong nó.
 - Quầng sáng loang **vào trong**, không phải `BlurMaskFilter` — vì mask filter không chạy trên
   canvas hardware-accelerated, muốn có phải bật software layer (rất tốn khi cuộn list).
 - Vệt sáng **không tự đảo chiều theo RTL**.
@@ -222,7 +222,7 @@ luôn thắng resource của thư viện):
 
 ```xml
 <!-- Thanh search dẹt: vẫn chỉ 1 attr lgv_pill, không cần biết trước chiều cao -->
-<vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView
+<vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
     android:layout_width="match_parent"
     android:layout_height="52dp"
     app:lgv_pill="true">
@@ -247,10 +247,10 @@ luôn thắng resource của thư viện):
             android:text="Tìm kiếm…"
             android:textColor="#80FFFFFF" />
     </LinearLayout>
-</vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView>
+</vn.minh_nguyen.vkey.liquid.ui.LiquidLayout>
 
 <!-- Item trong list: tắt glow cho nhẹ -->
-<vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView
+<vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
     android:layout_width="match_parent"
     android:layout_height="60dp"
     app:lgv_cornerRadius="18dp"

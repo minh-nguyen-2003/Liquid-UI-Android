@@ -2,7 +2,7 @@
     <string name="app_name">Liquid UI</string>
 
     <string name="demo_title">Liquid Glass</string>
-    <string name="demo_subtitle">Chỉ cần bọc content bằng LiquidGlassView</string>
+    <string name="demo_subtitle">Chỉ cần bọc content bằng LiquidLayout</string>
 
     <string name="section_pill">lgv_pill — tròn / pill tự tính bán kính</string>
     <string name="section_card">lgv_cornerRadius — thẻ bo góc</string>

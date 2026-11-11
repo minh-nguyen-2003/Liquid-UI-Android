@@ -7,7 +7,7 @@ import kotlin.math.pow
 import kotlin.math.sin
 
 /**
- * Phần tính toán của [LiquidGlassView] — thuần Kotlin (không import `android.*`) để unit test
+ * Phần tính toán của [LiquidLayout] — thuần Kotlin (không import `android.*`) để unit test
  * được trên JVM.
  *
  * Quy ước hình học: mọi lớp stroke vẽ ĐỒNG TÂM và canh mép ngoài trùng mép view — stroke dày `w`

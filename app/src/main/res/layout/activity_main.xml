@@ -26,7 +26,7 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView
+            <vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
                 android:layout_width="44dp"
                 android:layout_height="44dp"
                 app:lgv_pill="true">
@@ -37,7 +37,7 @@
                     android:contentDescription="@null"
                     android:padding="11dp"
                     android:src="@drawable/ic_menu" />
-            </vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView>
+            </vn.minh_nguyen.vkey.liquid.ui.LiquidLayout>
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -63,7 +63,7 @@
                     android:textSize="12sp" />
             </LinearLayout>
 
-            <vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView
+            <vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
                 android:layout_width="44dp"
                 android:layout_height="44dp"
                 app:lgv_pill="true">
@@ -74,7 +74,7 @@
                     android:contentDescription="@null"
                     android:padding="11dp"
                     android:src="@drawable/ic_bell" />
-            </vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView>
+            </vn.minh_nguyen.vkey.liquid.ui.LiquidLayout>
         </LinearLayout>
 
         <!-- ================= pill ================= -->
@@ -88,7 +88,7 @@
             android:layout_height="wrap_content"
             android:orientation="horizontal">
 
-            <vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView
+            <vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
                 android:layout_width="56dp"
                 android:layout_height="56dp"
                 app:lgv_pill="true">
@@ -99,9 +99,9 @@
                     android:contentDescription="@null"
                     android:padding="16dp"
                     android:src="@drawable/ic_search" />
-            </vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView>
+            </vn.minh_nguyen.vkey.liquid.ui.LiquidLayout>
 
-            <vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView
+            <vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
                 android:layout_width="56dp"
                 android:layout_height="56dp"
                 android:layout_marginStart="12dp"
@@ -114,9 +114,9 @@
                     android:contentDescription="@null"
                     android:padding="16dp"
                     android:src="@drawable/ic_star" />
-            </vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView>
+            </vn.minh_nguyen.vkey.liquid.ui.LiquidLayout>
 
-            <vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView
+            <vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
                 android:layout_width="56dp"
                 android:layout_height="56dp"
                 android:layout_marginStart="12dp"
@@ -129,11 +129,11 @@
                     android:contentDescription="@null"
                     android:padding="16dp"
                     android:src="@drawable/ic_chat" />
-            </vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView>
+            </vn.minh_nguyen.vkey.liquid.ui.LiquidLayout>
         </LinearLayout>
 
         <!-- Pill dẹt: vẫn 1 attr lgv_pill, không cần đo trước chiều cao -->
-        <vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView
+        <vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
             android:layout_width="match_parent"
             android:layout_height="52dp"
             android:layout_marginTop="12dp"
@@ -161,7 +161,7 @@
                     android:textColor="@color/white_50"
                     android:textSize="14sp" />
             </LinearLayout>
-        </vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView>
+        </vn.minh_nguyen.vkey.liquid.ui.LiquidLayout>
 
         <!-- ================= card ================= -->
 
@@ -169,7 +169,7 @@
             style="@style/SectionLabel"
             android:text="@string/section_card" />
 
-        <vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView
+        <vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:lgv_cornerRadius="24dp">
@@ -197,8 +197,8 @@
                     android:textColor="@color/white_70"
                     android:textSize="13sp" />
 
-                <!-- Kính lồng trong kính: nút bên trong chỉ là một LiquidGlassView nữa -->
-                <vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView
+                <!-- Kính lồng trong kính: nút bên trong chỉ là một LiquidLayout nữa -->
+                <vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
                     android:id="@+id/btnOrientation"
                     android:layout_width="wrap_content"
                     android:layout_height="40dp"
@@ -218,9 +218,9 @@
                         android:textColor="@color/white"
                         android:textSize="13sp"
                         tools:text="Nguồn sáng: top_left" />
-                </vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView>
+                </vn.minh_nguyen.vkey.liquid.ui.LiquidLayout>
             </LinearLayout>
-        </vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView>
+        </vn.minh_nguyen.vkey.liquid.ui.LiquidLayout>
 
         <!-- ================= list item ================= -->
 
@@ -228,7 +228,7 @@
             style="@style/SectionLabel"
             android:text="@string/section_list" />
 
-        <vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView
+        <vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
             android:layout_width="match_parent"
             android:layout_height="60dp"
             app:lgv_cornerRadius="18dp"
@@ -256,9 +256,9 @@
                     android:textColor="@color/white"
                     android:textSize="14sp" />
             </LinearLayout>
-        </vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView>
+        </vn.minh_nguyen.vkey.liquid.ui.LiquidLayout>
 
-        <vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView
+        <vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
             android:layout_width="match_parent"
             android:layout_height="60dp"
             android:layout_marginTop="10dp"
@@ -287,7 +287,7 @@
                     android:textColor="@color/white"
                     android:textSize="14sp" />
             </LinearLayout>
-        </vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView>
+        </vn.minh_nguyen.vkey.liquid.ui.LiquidLayout>
 
         <!-- ================= playground ================= -->
 
@@ -295,7 +295,7 @@
             style="@style/SectionLabel"
             android:text="@string/section_playground" />
 
-        <vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView
+        <vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:lgv_cornerRadius="24dp">
@@ -342,6 +342,6 @@
                         android:checked="true" />
                 </LinearLayout>
             </LinearLayout>
-        </vn.minh_nguyen.vkey.liquid.ui.LiquidGlassView>
+        </vn.minh_nguyen.vkey.liquid.ui.LiquidLayout>
     </LinearLayout>
 </ScrollView>
