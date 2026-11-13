@@ -38,7 +38,13 @@ import kotlin.math.sign
  *
  * Độ mờ chỉnh bằng [blurRadius] (mờ kiểu Gauss, mặc định 4dp).
  *
- * XML: `app:gl_color`, `app:gl_cornerRadius`, `app:gl_blur`, `app:gl_blurRadius`, `app:gl_backdrop`.
+ * Chế độ [GlassMode.LENS] ([mode]) đổi view thành thấu kính thật, giống hệt `lgv_mode="lens"` của [LiquidLayout]: không làm mờ, nội dung
+ * phía sau nét nguyên ở giữa, riêng vành mép rộng [bevelWidth] bị bẻ cong; lớp màu [glassColor] và phần vẽ thêm của lớp con (viền sáng,
+ * ánh trượt) vẫn phủ lên trên. Khi đó [blurEnabled], [blurRadius], [backdropMode], [refraction] không dùng tới; muốn nền qua thấu kính
+ * mờ đi thì đặt [lensBlur].
+ *
+ * XML: `app:gl_color`, `app:gl_cornerRadius`, `app:gl_blur`, `app:gl_blurRadius`, `app:gl_backdrop`, `app:gl_mode`, `app:gl_bevelWidth`,
+ * `app:gl_lensRefraction`, `app:gl_lensZoom`, `app:gl_lensBlur`.
  *
  * Lớp con: [GlassLensLayout] thêm bẻ cong nền ở mép (khúc xạ); [LiquidGlassLayout] thêm tiếp viền sáng + ánh trượt kiểu liquid.
  */
@@ -112,6 +118,51 @@ open class GlassLayout @JvmOverloads constructor(
             invalidate()
         }
 
+    /** Chế độ nền: [GlassMode.BLUR] (mặc định) hoặc [GlassMode.LENS] (thấu kính thật, không mờ, bẻ cong ở vành mép). */
+    var mode: Int = GlassMode.BLUR
+        set(value) {
+            if (field == value) return
+            field = value
+            if (value == GlassMode.LENS) {
+                // Không còn dùng ảnh nền mờ dùng chung
+                if (isAttachedToWindow) GlassBackdrop.of(backdropRoot ?: rootView).release(this)
+            } else {
+                lensGlass.release()
+            }
+            invalidate()
+        }
+
+    /** (lens) Bề rộng vành mép vát tròn (px) — chỉ phần này bị bẻ cong, phía trong là mặt kính phẳng. Không quá nửa cạnh ngắn. */
+    var bevelWidth: Float = resources.getDimension(R.dimen.liquid_glass_bevel_width)
+        set(value) {
+            field = value.coerceAtLeast(0f)
+            invalidate()
+        }
+
+    /** (lens) Độ bẻ cong ở vành mép: sát mép hiện phần nền nằm sâu vào trong chừng này lần [bevelWidth]; 0 = không bẻ; mặc định 1. */
+    var lensRefraction: Float = 1f
+        set(value) {
+            field = value.coerceAtLeast(0f)
+            invalidate()
+        }
+
+    /** (lens) Phóng to nội dung phía sau quanh tâm view như kính lúp; 1 (mặc định) = không phóng. */
+    var lensZoom: Float = 1f
+        set(value) {
+            field = value.coerceAtLeast(1f)
+            invalidate()
+        }
+
+    /** (lens) Độ mờ của nội dung nhìn qua kính (px, độ lệch chuẩn của mờ Gauss); 0 (mặc định) = nét nguyên. */
+    var lensBlur: Float = 0f
+        set(value) {
+            field = value.coerceAtLeast(0f)
+            invalidate()
+        }
+
+    /** Phần thấu kính của chế độ [GlassMode.LENS] (dùng chung với [LiquidLayout]). */
+    private val lensGlass = LiquidLens(this)
+
     /** Phóng to nền quanh tâm view (1 = không phóng); lớp con có thấu kính đặt lớn hơn 1. */
     protected var backdropZoom: Float = 1f
         set(value) {
@@ -165,7 +216,13 @@ open class GlassLayout @JvmOverloads constructor(
      * lại view; chỉ vẽ lại khi view đổi chỗ trong cửa sổ (vuốt trang) hoặc ảnh nền vừa có / vừa mất / đổi cỡ.
      */
     private val preDrawListener = ViewTreeObserver.OnPreDrawListener {
-        if (blurEnabled && isShown) {
+        if (mode == GlassMode.LENS) {
+            // Thấu kính tự chụp nét nền của mình và bẻ cong lại (tự giới hạn tần suất)
+            lensGlass.update(
+                backdropRoot ?: rootView, bevelWidth, lensRefraction, lensZoom, resolvedRadius(width.toFloat(), height.toFloat()),
+                lensBlur
+            )
+        } else if (blurEnabled && isShown) {
             val root = backdropRoot ?: rootView
             val backdrop = GlassBackdrop.of(root)
             backdrop.update(root, this, all = backdropMode == GlassBackdropMode.ALL)
@@ -187,6 +244,7 @@ open class GlassLayout @JvmOverloads constructor(
      * nhỏ nền lấy tới. Trả về `false` khi view không cần nền (tắt làm mờ, đang ẩn, chưa có kích thước).
      */
     internal fun backdropRegion(root: View, out: RectF): Boolean {
+        if (mode == GlassMode.LENS) return false
         if (!blurEnabled || !isAttachedToWindow || !isShown || width <= 0 || height <= 0) return false
         getLocationOnScreen(windowLocation)
         root.getLocationOnScreen(rootLocation)
@@ -208,6 +266,11 @@ open class GlassLayout @JvmOverloads constructor(
             blurEnabled = values.getBoolean(R.styleable.GlassLayout_gl_blur, blurEnabled)
             blurRadius = values.getDimension(R.styleable.GlassLayout_gl_blurRadius, blurRadius)
             backdropMode = values.getInt(R.styleable.GlassLayout_gl_backdrop, backdropMode)
+            mode = values.getInt(R.styleable.GlassLayout_gl_mode, mode)
+            bevelWidth = values.getDimension(R.styleable.GlassLayout_gl_bevelWidth, bevelWidth)
+            lensRefraction = values.getFloat(R.styleable.GlassLayout_gl_lensRefraction, lensRefraction)
+            lensZoom = values.getFloat(R.styleable.GlassLayout_gl_lensZoom, lensZoom)
+            lensBlur = values.getDimension(R.styleable.GlassLayout_gl_lensBlur, lensBlur)
             values.recycle()
         }
         fillPaint.color = glassColor
@@ -238,7 +301,8 @@ open class GlassLayout @JvmOverloads constructor(
         val height = height.toFloat()
         if (width <= 0f || height <= 0f) return
         val radius = resolvedRadius(width, height)
-        drawBackdrop(canvas, width, height)
+        // Thấu kính: hình nét đã bẻ cong ở vành mép (view đã cắt theo hình kính); không thì nền mờ
+        if (mode == GlassMode.LENS) lensGlass.draw(canvas, width, height, radius, clip = false) else drawBackdrop(canvas, width, height)
         fillRect.set(0f, 0f, width, height)
         canvas.drawRoundRect(fillRect, radius, radius, fillPaint)
         onDrawGlassOverlay(canvas, width, height, radius)
@@ -410,6 +474,7 @@ open class GlassLayout @JvmOverloads constructor(
     override fun onDetachedFromWindow() {
         viewTreeObserver.removeOnPreDrawListener(preDrawListener)
         GlassBackdrop.of(backdropRoot ?: rootView).release(this)
+        lensGlass.release()
         super.onDetachedFromWindow()
     }
 

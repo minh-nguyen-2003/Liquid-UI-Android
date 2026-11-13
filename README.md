@@ -85,6 +85,7 @@ trên-trái, có quầng sáng.
 | `lgv_bevelWidth` | dimension | `12dp` | (lens) Bề rộng vành mép vát tròn, phần bị bẻ cong. Tự clamp về nửa cạnh ngắn. |
 | `lgv_refraction` | float | `1` | (lens) Độ bẻ cong: sát mép hiện phần nền nằm sâu vào trong chừng này lần bề rộng vành. `0` = không bẻ. |
 | `lgv_lensZoom` | float | `1` | (lens) Phóng to nội dung phía sau quanh tâm như kính lúp. `1` = không phóng. |
+| `lgv_lensBlur` | dimension | `0dp` | (lens) Độ mờ của nội dung nhìn qua kính (mờ Gauss, như `blur()` của CSS). `0` = nét. |
 
 ## Enum `lgv_highlightOrientation`
 
@@ -117,6 +118,7 @@ Mỗi attribute đều có một property tương ứng, set xong tự `invalida
 | `bevelWidth` | `Float` | px. Chỉ dùng ở chế độ lens. |
 | `refraction` | `Float` | Chỉ dùng ở chế độ lens. |
 | `lensZoom` | `Float` | Chỉ dùng ở chế độ lens; nhỏ nhất 1. |
+| `lensBlur` | `Float` | px. Chỉ dùng ở chế độ lens; 0 = nét. |
 | `backdropRoot` | `View?` | (lens) Gốc nội dung nhìn qua kính khi view nằm ở cửa sổ khác (hộp thoại, bottom sheet). |
 
 ```kotlin
@@ -182,9 +184,40 @@ bo góc) — chữ, ảnh sát mép bị ép lại và lật ngược như nhìn
   điểm ảnh thì hình trong kính tự thu nhỏ độ phân giải (hơi mềm đi).
 - Lớp màu `lgv_backgroundColor` vẫn phủ lên trên hình khúc xạ; muốn kính trong hẳn thì đặt trong
   suốt. Vệt sáng, quầng sáng vẽ như chế độ `tint`.
+- Muốn nền qua kính mờ đi (kính mờ nhưng mép vẫn bẻ cong kiểu lens): đặt `app:lgv_lensBlur`, ví dụ
+  `4dp`. Càng mờ thì ảnh chụp càng được thu nhỏ nên không nặng thêm.
 - Kính trơn, chỉ còn phần bẻ cong (không màu phủ, không viền): đặt
   `app:lgv_backgroundColor="@android:color/transparent"` và `app:lgv_highlight="false"`.
 - Content đặt bên trong view không lẫn vào hình nhìn qua kính.
+
+### Cùng chế độ lens trên GlassLayout / GlassLensLayout / LiquidGlassLayout
+
+Ba view kính cũng có đúng chế độ này (cùng một phần mã bẻ cong với `LiquidLayout`), bật bằng
+`app:gl_mode="lens"`. Khi đó view **không làm mờ** nữa: nền nét ở giữa, bẻ cong ở vành mép; lớp
+màu và phần vẽ thêm của từng view (viền sáng, ánh trượt, lún khi bấm của `LiquidGlassLayout`) vẫn
+giữ nguyên.
+
+```xml
+<vn.minh_nguyen.vkey.liquid.ui.LiquidGlassLayout
+    android:layout_width="56dp"
+    android:layout_height="56dp"
+    app:gl_mode="lens"
+    app:gl_bevelWidth="12dp"
+    app:gl_lensRefraction="1"
+    app:gl_lensZoom="1" />
+```
+
+| Attribute | Mặc định | Tương ứng của `LiquidLayout` |
+|---|---|---|
+| `gl_mode` (`blur` / `lens`) | `blur` | `lgv_mode` |
+| `gl_bevelWidth` | `12dp` | `lgv_bevelWidth` |
+| `gl_lensRefraction` | `1` | `lgv_refraction` |
+| `gl_lensZoom` | `1` | `lgv_lensZoom` |
+| `gl_lensBlur` | `0dp` | `lgv_lensBlur` |
+
+Trong code: `mode = GlassMode.LENS`, `bevelWidth`, `lensRefraction`, `lensZoom`, `lensBlur`. Ở chế
+độ này `gl_blur`, `gl_blurRadius`, `gl_backdrop`, `gll_refraction` / `lgl_refraction` không dùng tới;
+độ mờ của nền qua thấu kính chỉnh bằng `gl_lensBlur`.
 
 ## Chọn view nào
 
@@ -198,6 +231,7 @@ video). Tên view có chữ nào thì có phần đó:
 | `GlassLayout` | không | có | không |
 | `GlassLensLayout` | không | có | có |
 | `LiquidGlassLayout` | có | có | có |
+| ba view kính + `gl_mode="lens"` | như trên | không (nền nét) | có, chỉ ở vành mép |
 
 `GlassLensLayout` kế thừa `GlassLayout`, `LiquidGlassLayout` kế thừa `GlassLensLayout`, nên phần
 "Nền được lấy từ đâu" và "Chi phí" ở mục dưới áp dụng cho cả ba.

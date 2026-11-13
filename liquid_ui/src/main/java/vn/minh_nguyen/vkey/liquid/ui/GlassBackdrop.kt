@@ -252,6 +252,28 @@ class GlassBackdrop private constructor() {
         videoBranches.clear()
     }
 
+    /**
+     * Làm mờ cả [bitmap] tại chỗ, mờ kiểu Gauss độ lệch chuẩn [sigma] (điểm ảnh của bitmap) bằng [BLUR_PASSES] lượt mờ hộp như ảnh nền
+     * dùng chung. Dùng cho thấu kính ([LiquidLens]) có đặt độ mờ. [sigma] ≤ 0 thì không làm gì.
+     */
+    internal fun blur(bitmap: Bitmap, sigma: Float) {
+        val radius = boxRadius(sigma)
+        if (radius <= 0) return
+        val width = bitmap.width
+        val height = bitmap.height
+        val size = width * height
+        if (pixels.size < size) {
+            pixels = IntArray(size)
+            scratch = IntArray(size)
+        }
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+        repeat(BLUR_PASSES) {
+            boxBlurHorizontal(pixels, scratch, width, height, radius)
+            boxBlurVertical(scratch, pixels, width, height, radius)
+        }
+        bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
+    }
+
     /** Theo dõi lượt vẽ của [root] (ở cửa sổ khác với view kính) để biết khi nào màn phía sau đổi. */
     private fun observe(root: View) {
         val observer = root.viewTreeObserver

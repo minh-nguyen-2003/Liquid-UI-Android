@@ -33,6 +33,8 @@
         <attr name="lgv_refraction" format="float" />
         <!-- (lens) Phóng to nội dung phía sau quanh tâm như kính lúp; mặc định 1 = không phóng -->
         <attr name="lgv_lensZoom" format="float" />
+        <!-- (lens) Độ mờ của nội dung nhìn qua kính (độ lệch chuẩn của mờ Gauss); mặc định 0 = nét -->
+        <attr name="lgv_lensBlur" format="dimension" />
     </declare-styleable>
 
     <!-- Kính chỉ làm mờ nền phía sau (kể cả video), không có viền sáng kiểu liquid — xem GlassLayout -->
@@ -52,6 +54,21 @@
             <!-- Chỉ video (TextureView) và ảnh phủ ít nhất nửa cửa sổ; nhẹ hơn -->
             <enum name="media" value="1" />
         </attr>
+        <!-- Chế độ nền. Giá trị enum phải khớp hằng số trong GlassMode -->
+        <attr name="gl_mode">
+            <!-- Làm mờ nền phía sau (mặc định) -->
+            <enum name="blur" value="0" />
+            <!-- Thấu kính thật như lgv_mode="lens" của LiquidLayout: không mờ, nền nét ở giữa, bẻ cong ở vành mép -->
+            <enum name="lens" value="1" />
+        </attr>
+        <!-- (lens) Bề rộng vành mép vát tròn, phần bị bẻ cong; mặc định 12dp -->
+        <attr name="gl_bevelWidth" format="dimension" />
+        <!-- (lens) Độ bẻ cong: sát mép hiện phần nền nằm sâu vào trong chừng này lần bề rộng vành; 0 = không bẻ; mặc định 1 -->
+        <attr name="gl_lensRefraction" format="float" />
+        <!-- (lens) Phóng to nội dung phía sau quanh tâm như kính lúp; mặc định 1 = không phóng -->
+        <attr name="gl_lensZoom" format="float" />
+        <!-- (lens) Độ mờ của nội dung nhìn qua kính (độ lệch chuẩn của mờ Gauss); mặc định 0 = nét -->
+        <attr name="gl_lensBlur" format="dimension" />
     </declare-styleable>
 
     <!-- Kính làm mờ + bẻ cong nền ở mép (kể cả video), không có viền sáng kiểu liquid — xem GlassLensLayout. Dùng thêm được gl_* -->

@@ -207,6 +207,16 @@
                 app:lgv_mode="lens"
                 app:lgv_pill="true" />
 
+            <!-- Cùng chế độ lens trên LiquidGlassLayout, thêm gl_lensBlur: nền mờ 4dp, bẻ cong ở vành mép, giữ viền sáng + ánh trượt của nó -->
+            <vn.minh_nguyen.vkey.liquid.ui.LiquidGlassLayout
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_gravity="start|bottom"
+                android:layout_marginStart="24dp"
+                app:gl_lensBlur="4dp"
+                app:gl_mode="lens"
+                app:lgl_color="@android:color/transparent" />
+
             <vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
                 android:layout_width="96dp"
                 android:layout_height="96dp"
