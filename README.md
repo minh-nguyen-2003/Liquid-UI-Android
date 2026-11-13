@@ -39,15 +39,15 @@ Thêm dependency vào `build.gradle` (module):
 
 ```
 	dependencies {
-	        implementation("com.github.minh-nguyen-2003:Liquid-UI-Android:1.0.8")
+	        implementation("com.github.minh-nguyen-2003:Liquid-UI-Android:1.1.0")
 	}
 ```
 
 Nếu JitPack build ra dạng multi-module thì coordinate là
-`com.github.minh-nguyen-2003.Liquid-UI-Android:liquid_ui:1.0.8` — xem log build trên JitPack để
+`com.github.minh-nguyen-2003.Liquid-UI-Android:liquid_ui:1.1.0` — xem log build trên JitPack để
 lấy đúng dòng.
 
-## Nhớ thay 1.0.8 bằng tag release mới nhé.
+## Nhớ thay 1.1.0 bằng tag release mới nhé.
 
 ## Cách sử dụng cơ bản
 
