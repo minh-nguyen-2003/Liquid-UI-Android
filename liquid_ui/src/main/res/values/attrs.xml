@@ -18,6 +18,19 @@
             <enum name="top_left_bottom_right" value="2" />
             <enum name="top_right_bottom_left" value="3" />
         </attr>
+        <!-- Chế độ nền. Giá trị enum phải khớp hằng số trong LiquidGlassMode -->
+        <attr name="lgv_mode">
+            <!-- Chỉ phủ lớp màu + vệt sáng, không đụng tới nội dung phía sau (mặc định) -->
+            <enum name="tint" value="0" />
+            <!-- Thấu kính thật: nội dung phía sau nét nguyên ở giữa, bị bẻ cong ở vành mép -->
+            <enum name="lens" value="1" />
+        </attr>
+        <!-- (lens) Bề rộng vành mép vát tròn, phần bị bẻ cong; mặc định 12dp -->
+        <attr name="lgv_bevelWidth" format="dimension" />
+        <!-- (lens) Độ bẻ cong: sát mép hiện phần nền nằm sâu vào trong chừng này lần bề rộng vành; 0 = không bẻ; mặc định 1 -->
+        <attr name="lgv_refraction" format="float" />
+        <!-- (lens) Phóng to nội dung phía sau quanh tâm như kính lúp; mặc định 1 = không phóng -->
+        <attr name="lgv_lensZoom" format="float" />
     </declare-styleable>
 
     <!-- Kính chỉ làm mờ nền phía sau (kể cả video), không có viền sáng kiểu liquid — xem GlassLayout -->

@@ -240,6 +240,18 @@ class GlassBackdrop private constructor() {
         regions.remove(view)
     }
 
+    /**
+     * Vẽ nét (không thu nhỏ, không làm mờ) mọi thứ đang hiện trong cây view của [root] vào [canvas] — canvas đã được dịch / thu phóng sẵn
+     * về toạ độ của [root] và chỉ phần nằm trong ảnh đích mới được vẽ. Dùng cho [LiquidLayout] chế độ thấu kính ([LiquidGlassMode.LENS]):
+     * giao diện thường vẽ lại như lúc chụp nền mờ, khung hình video ghép đúng vị trí; các view kính tự bỏ qua mình.
+     */
+    internal fun drawSharp(root: View, canvas: CaptureCanvas) {
+        videoBranches.clear()
+        collectVideoBranches(root)
+        drawTree(root, null, canvas)
+        videoBranches.clear()
+    }
+
     /** Theo dõi lượt vẽ của [root] (ở cửa sổ khác với view kính) để biết khi nào màn phía sau đổi. */
     private fun observe(root: View) {
         val observer = root.viewTreeObserver

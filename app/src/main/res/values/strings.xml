@@ -7,6 +7,9 @@
     <string name="section_pill">lgv_pill — tròn / pill tự tính bán kính</string>
     <string name="section_card">lgv_cornerRadius — thẻ bo góc</string>
     <string name="section_list">lgv_glow=false — item list, vẽ nhẹ hơn</string>
+    <string name="section_lens">lgv_mode=lens — bẻ cong nền thật ở vành mép</string>
+    <string name="lens_text">Kính là một mặt phẳng với vành mép vát tròn. Chỉ vành mép bẻ cong ánh sáng, nên chữ ở giữa vẫn nét nguyên còn chữ sát mép thì bị ép và lật lại. Cuộn trang này để thấy chữ chạy qua dưới hai tấm kính.</string>
+    <string name="lens_sample">Aa Bb Cc 0123456789</string>
     <string name="section_playground">Đổi bằng code lúc chạy</string>
 
     <string name="search_hint">Tìm kiếm…</string>

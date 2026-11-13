@@ -80,6 +80,10 @@ trên-trái, có quầng sáng.
 | `lgv_highlightOrientation` | enum | `top_left_bottom_right` | Hướng nguồn sáng — xem bảng dưới. |
 | `lgv_glow` | boolean | `true` | Quầng sáng mềm loang vào trong. Tắt cho item list cuộn nhiều. |
 | `lgv_clipContent` | boolean | `true` | Bo góc luôn content bên trong (`clipToOutline`). |
+| `lgv_mode` | enum | `tint` | `tint`: chỉ lớp màu + vệt sáng. `lens`: bẻ cong nền thật ở vành mép — xem mục "Chế độ lens". |
+| `lgv_bevelWidth` | dimension | `12dp` | (lens) Bề rộng vành mép vát tròn, phần bị bẻ cong. Tự clamp về nửa cạnh ngắn. |
+| `lgv_refraction` | float | `1` | (lens) Độ bẻ cong: sát mép hiện phần nền nằm sâu vào trong chừng này lần bề rộng vành. `0` = không bẻ. |
+| `lgv_lensZoom` | float | `1` | (lens) Phóng to nội dung phía sau quanh tâm như kính lúp. `1` = không phóng. |
 
 ## Enum `lgv_highlightOrientation`
 
@@ -107,6 +111,11 @@ Mỗi attribute đều có một property tương ứng, set xong tự `invalida
 | `highlightOrientation` | `Int` | Nhận hằng số `LiquidGlassOrientation`. |
 | `isGlowEnabled` | `Boolean` | |
 | `isClipContent` | `Boolean` | |
+| `mode` | `Int` | Nhận hằng số `LiquidGlassMode` (`TINT` / `LENS`). |
+| `bevelWidth` | `Float` | px. Chỉ dùng ở chế độ lens. |
+| `refraction` | `Float` | Chỉ dùng ở chế độ lens. |
+| `lensZoom` | `Float` | Chỉ dùng ở chế độ lens; nhỏ nhất 1. |
+| `backdropRoot` | `View?` | (lens) Gốc nội dung nhìn qua kính khi view nằm ở cửa sổ khác (hộp thoại, bottom sheet). |
 
 ```kotlin
   glassView.highlightAlpha = 0.8f
@@ -133,6 +142,45 @@ Tạo hoàn toàn bằng code cũng được (dùng như `FrameLayout`):
   }
 ```
 
+## Chế độ lens — bẻ cong nền thật
+
+Mặc định (`tint`) `LiquidLayout` không đụng tới nội dung phía sau. Bật `lgv_mode="lens"` thì nó
+thành một tấm kính thật: **mặt kính phẳng, vành mép vát tròn**. Nội dung phía sau hiện nét nguyên
+ở giữa; riêng vành mép rộng `lgv_bevelWidth` bị khúc xạ theo đúng hình kính (tròn, pill, chữ nhật
+bo góc) — chữ, ảnh sát mép bị ép lại và lật ngược như nhìn qua mép kính dày. Không làm mờ.
+
+```xml
+<vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
+    android:layout_width="56dp"
+    android:layout_height="56dp"
+    app:lgv_backgroundColor="@android:color/transparent"
+    app:lgv_mode="lens"
+    app:lgv_pill="true" />
+
+<!-- Kính lúp: vành dày hơn, bẻ mạnh hơn, phóng 1,4 lần -->
+<vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
+    android:layout_width="96dp"
+    android:layout_height="96dp"
+    app:lgv_backgroundColor="@android:color/transparent"
+    app:lgv_bevelWidth="16dp"
+    app:lgv_lensZoom="1.4"
+    app:lgv_mode="lens"
+    app:lgv_pill="true"
+    app:lgv_refraction="1.3" />
+```
+
+- Nền là mọi thứ đang hiện trong cửa sổ nằm sau view: giao diện thường lẫn video vẽ bằng
+  `TextureView` (khung hình video lấy ở 1/4 độ phân giải nên mềm hơn chữ). Ảnh là bitmap phần cứng
+  không vẽ lại được (Glide: tải với `disallowHardwareConfig()`).
+- Nền chụp lại trước mỗi lượt vẽ của cửa sổ (tối đa một lần mỗi 12 ms), nên cuộn nội dung bên dưới
+  hay kéo view đi thì hình trong kính chạy theo. Màn hình đứng yên thì không tốn gì.
+- Tốn hơn `tint`: mỗi lượt phải vẽ lại phần giao diện nằm sau view ở độ phân giải thật. Hợp với
+  nút, thanh nổi, kính lúp; đừng dùng cho hàng chục item trong list. View lớn hơn chừng 600 nghìn
+  điểm ảnh thì hình trong kính tự thu nhỏ độ phân giải (hơi mềm đi).
+- Lớp màu `lgv_backgroundColor` vẫn phủ lên trên hình khúc xạ; muốn kính trong hẳn thì đặt trong
+  suốt. Vệt sáng, quầng sáng vẽ như chế độ `tint`.
+- Content đặt bên trong view không lẫn vào hình nhìn qua kính.
+
 ## Chọn view nào
 
 "Liquid" = viền sáng / ánh trượt vẽ trên mặt kính. "Glass" = làm mờ thật nội dung phía sau (kể cả
@@ -141,6 +189,7 @@ video). Tên view có chữ nào thì có phần đó:
 | View | Liquid (viền sáng) | Glass (làm mờ nền) | Bẻ cong ở mép |
 |---------------------|:---:|:---:|:---:|
 | `LiquidLayout` | có | không | không |
+| `LiquidLayout` + `lgv_mode="lens"` | có | không (nền nét) | có, chỉ ở vành mép |
 | `GlassLayout` | không | có | không |
 | `GlassLensLayout` | không | có | có |
 | `LiquidGlassLayout` | có | có | có |
@@ -274,13 +323,14 @@ luôn thắng resource của thư viện):
     <!-- Dự án dùng sdp thì trỏ thẳng sang sdp cho khớp scale màn hình -->
     <dimen name="liquid_glass_corner_radius">@dimen/_12sdp</dimen>
     <dimen name="liquid_glass_highlight_width">@dimen/_1sdp</dimen>
+    <dimen name="liquid_glass_bevel_width">@dimen/_12sdp</dimen>
 </resources>
 ```
 
 ## Lưu ý
 
-- `LiquidLayout` **không blur nội dung phía sau**. Nó chỉ phủ một lớp màu mờ + vẽ vệt sáng bằng
-  `Canvas`, nhờ vậy nhẹ và dùng được ở mọi nơi. Muốn blur backdrop thật trên video / ảnh thì dùng
+- `LiquidLayout` **không blur nội dung phía sau**. Ở chế độ mặc định nó chỉ phủ một lớp màu mờ + vẽ
+  vệt sáng bằng `Canvas`, nhờ vậy nhẹ và dùng được ở mọi nơi (chế độ `lens` thì có chụp lại nền). Muốn blur backdrop thật trên video / ảnh thì dùng
   `LiquidGlassLayout` (mục trên); trên giao diện thường thì bọc một `BlurView`
   (`eightbitlab:blurview`) bên ngoài rồi để `LiquidLayout` bên trong nó.
 - Quầng sáng loang **vào trong**, không phải `BlurMaskFilter` — vì mask filter không chạy trên

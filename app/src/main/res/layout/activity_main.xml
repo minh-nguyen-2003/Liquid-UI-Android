@@ -163,6 +163,63 @@
             </LinearLayout>
         </vn.minh_nguyen.vkey.liquid.ui.LiquidLayout>
 
+        <!-- ================= lens ================= -->
+
+        <TextView
+            style="@style/SectionLabel"
+            android:text="@string/section_lens" />
+
+        <!-- Chữ nằm dưới, hai tấm kính lens đè lên: giữa kính chữ nét nguyên, vành mép 12dp bị bẻ cong. Kính tròn bên phải phóng 1,4 lần
+             như kính lúp. lgv_backgroundColor trong suốt để thấy rõ phần khúc xạ -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:lineSpacingMultiplier="1.2"
+                    android:text="@string/lens_text"
+                    android:textColor="@android:color/white"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:maxLines="1"
+                    android:text="@string/lens_sample"
+                    android:textColor="@android:color/white"
+                    android:textSize="34sp" />
+            </LinearLayout>
+
+            <vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
+                android:layout_width="150dp"
+                android:layout_height="64dp"
+                android:layout_marginStart="24dp"
+                android:layout_marginTop="8dp"
+                app:lgv_backgroundColor="@android:color/transparent"
+                app:lgv_mode="lens"
+                app:lgv_pill="true" />
+
+            <vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
+                android:layout_width="96dp"
+                android:layout_height="96dp"
+                android:layout_gravity="end|bottom"
+                android:layout_marginEnd="24dp"
+                app:lgv_backgroundColor="@android:color/transparent"
+                app:lgv_bevelWidth="16dp"
+                app:lgv_lensZoom="1.4"
+                app:lgv_mode="lens"
+                app:lgv_pill="true"
+                app:lgv_refraction="1.3" />
+        </FrameLayout>
+
         <!-- ================= card ================= -->
 
         <TextView

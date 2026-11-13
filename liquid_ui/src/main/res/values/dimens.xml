@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- App có thể khai lại 2 dimen này với cùng tên để đổi mặc định toàn cục — ví dụ trỏ sang
+    <!-- App có thể khai lại các dimen này với cùng tên để đổi mặc định toàn cục — ví dụ trỏ sang
          sdp (`@dimen/_12sdp`) nếu dự án đang dùng thư viện scalable dp. -->
 
     <!-- Bán kính bo mặc định khi không khai lgv_cornerRadius (và lgv_pill = false) -->
     <dimen name="liquid_glass_corner_radius">12dp</dimen>
     <!-- Độ dày vệt sáng nét mặc định -->
     <dimen name="liquid_glass_highlight_width">1dp</dimen>
+    <!-- Bề rộng vành mép bị bẻ cong mặc định của chế độ lens khi không khai lgv_bevelWidth -->
+    <dimen name="liquid_glass_bevel_width">12dp</dimen>
 </resources>
