@@ -214,6 +214,7 @@
                 android:layout_marginEnd="24dp"
                 app:lgv_backgroundColor="@android:color/transparent"
                 app:lgv_bevelWidth="16dp"
+                app:lgv_highlight="false"
                 app:lgv_lensZoom="1.4"
                 app:lgv_mode="lens"
                 app:lgv_pill="true"

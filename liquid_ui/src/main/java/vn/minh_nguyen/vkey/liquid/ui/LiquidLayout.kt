@@ -40,6 +40,7 @@ import kotlin.math.sqrt
  *   app:lgv_highlightWidth       — độ dày vệt sáng nét
  *   app:lgv_highlightAlpha       — độ sáng đỉnh của vệt (0..1)
  *   app:lgv_highlightOrientation — hướng nguồn sáng, xem [LiquidGlassOrientation]
+ *   app:lgv_highlight            — false: tắt hẳn viền sáng lẫn quầng sáng (mặc định true)
  *   app:lgv_glow                 — quầng sáng mềm loang vào trong (tắt được cho item list)
  *   app:lgv_clipContent          — bo góc luôn content bên trong (mặc định true)
  *   app:lgv_mode                 — `tint` (mặc định) hoặc `lens`, xem [LiquidGlassMode]
@@ -135,6 +136,17 @@ class LiquidLayout @JvmOverloads constructor(
             if (field == value) return
             field = value
             highlightShader = null
+            invalidate()
+        }
+
+    /**
+     * Viền sáng (vệt sáng nét + quầng sáng). Tắt thì view không vẽ viền nào: cùng nền trong suốt và chế độ
+     * [LiquidGlassMode.LENS] sẽ ra tấm kính trơn, chỉ còn phần bẻ cong ở vành mép.
+     */
+    var isHighlightEnabled: Boolean = true
+        set(value) {
+            if (field == value) return
+            field = value
             invalidate()
         }
 
@@ -278,6 +290,7 @@ class LiquidLayout @JvmOverloads constructor(
             R.styleable.LiquidLayout_lgv_highlightOrientation,
             LiquidGlassOrientation.TOP_LEFT_BOTTOM_RIGHT
         )
+        isHighlightEnabled = ta.getBoolean(R.styleable.LiquidLayout_lgv_highlight, true)
         isGlowEnabled = ta.getBoolean(R.styleable.LiquidLayout_lgv_glow, true)
         isClipContent = ta.getBoolean(R.styleable.LiquidLayout_lgv_clipContent, true)
         mode = ta.getInt(R.styleable.LiquidLayout_lgv_mode, LiquidGlassMode.TINT)
@@ -310,7 +323,8 @@ class LiquidLayout @JvmOverloads constructor(
         mode: Int = this.mode,
         bevelWidth: Float = this.bevelWidth,
         refraction: Float = this.refraction,
-        lensZoom: Float = this.lensZoom
+        lensZoom: Float = this.lensZoom,
+        highlight: Boolean = this.isHighlightEnabled
     ) {
         this.glassColor = glassColor
         this.cornerRadius = cornerRadius
@@ -325,6 +339,7 @@ class LiquidLayout @JvmOverloads constructor(
         this.bevelWidth = bevelWidth
         this.refraction = refraction
         this.lensZoom = lensZoom
+        this.isHighlightEnabled = highlight
     }
 
     private fun refreshOutline() {
@@ -564,7 +579,7 @@ class LiquidLayout @JvmOverloads constructor(
         canvas.drawRoundRect(drawRect, radius, radius, fillPaint)
 
         val stroke = LiquidGlassGeometry.clampStrokeWidth(highlightWidth, w, h)
-        if (stroke <= 0f || highlightAlpha <= 0f) return
+        if (!isHighlightEnabled || stroke <= 0f || highlightAlpha <= 0f) return
 
         if (highlightShader == null) highlightShader = buildHighlightShader(w, h)
         strokePaint.shader = highlightShader

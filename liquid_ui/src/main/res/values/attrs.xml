@@ -9,6 +9,8 @@
         <attr name="lgv_highlightColor" format="color" />
         <attr name="lgv_highlightWidth" format="dimension" />
         <attr name="lgv_highlightAlpha" format="float" />
+        <!-- false: tắt hẳn viền sáng lẫn quầng sáng; mặc định true -->
+        <attr name="lgv_highlight" format="boolean" />
         <attr name="lgv_glow" format="boolean" />
         <attr name="lgv_clipContent" format="boolean" />
         <!-- Giá trị enum phải khớp hằng số trong LiquidGlassOrientation -->

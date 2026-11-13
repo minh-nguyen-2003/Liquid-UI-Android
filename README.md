@@ -78,6 +78,7 @@ trên-trái, có quầng sáng.
 | `lgv_highlightWidth` | dimension | `1dp` | Độ dày vệt sáng nét. |
 | `lgv_highlightAlpha` | float | `0.55` | Alpha đỉnh của vệt sáng, tự clamp 0..1. Đặt `0` để tắt hẳn viền. |
 | `lgv_highlightOrientation` | enum | `top_left_bottom_right` | Hướng nguồn sáng — xem bảng dưới. |
+| `lgv_highlight` | boolean | `true` | `false`: tắt hẳn viền sáng lẫn quầng sáng. |
 | `lgv_glow` | boolean | `true` | Quầng sáng mềm loang vào trong. Tắt cho item list cuộn nhiều. |
 | `lgv_clipContent` | boolean | `true` | Bo góc luôn content bên trong (`clipToOutline`). |
 | `lgv_mode` | enum | `tint` | `tint`: chỉ lớp màu + vệt sáng. `lens`: bẻ cong nền thật ở vành mép — xem mục "Chế độ lens". |
@@ -109,6 +110,7 @@ Mỗi attribute đều có một property tương ứng, set xong tự `invalida
 | `highlightWidth` | `Float` | px. |
 | `highlightAlpha` | `Float` | Tự clamp 0..1. |
 | `highlightOrientation` | `Int` | Nhận hằng số `LiquidGlassOrientation`. |
+| `isHighlightEnabled` | `Boolean` | `false` = không vẽ viền sáng lẫn quầng sáng. |
 | `isGlowEnabled` | `Boolean` | |
 | `isClipContent` | `Boolean` | |
 | `mode` | `Int` | Nhận hằng số `LiquidGlassMode` (`TINT` / `LENS`). |
@@ -157,11 +159,12 @@ bo góc) — chữ, ảnh sát mép bị ép lại và lật ngược như nhìn
     app:lgv_mode="lens"
     app:lgv_pill="true" />
 
-<!-- Kính lúp: vành dày hơn, bẻ mạnh hơn, phóng 1,4 lần -->
+<!-- Kính lúp trơn: không màu phủ, không viền; vành dày hơn, bẻ mạnh hơn, phóng 1,4 lần -->
 <vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
     android:layout_width="96dp"
     android:layout_height="96dp"
     app:lgv_backgroundColor="@android:color/transparent"
+    app:lgv_highlight="false"
     app:lgv_bevelWidth="16dp"
     app:lgv_lensZoom="1.4"
     app:lgv_mode="lens"
@@ -179,6 +182,8 @@ bo góc) — chữ, ảnh sát mép bị ép lại và lật ngược như nhìn
   điểm ảnh thì hình trong kính tự thu nhỏ độ phân giải (hơi mềm đi).
 - Lớp màu `lgv_backgroundColor` vẫn phủ lên trên hình khúc xạ; muốn kính trong hẳn thì đặt trong
   suốt. Vệt sáng, quầng sáng vẽ như chế độ `tint`.
+- Kính trơn, chỉ còn phần bẻ cong (không màu phủ, không viền): đặt
+  `app:lgv_backgroundColor="@android:color/transparent"` và `app:lgv_highlight="false"`.
 - Content đặt bên trong view không lẫn vào hình nhìn qua kính.
 
 ## Chọn view nào
