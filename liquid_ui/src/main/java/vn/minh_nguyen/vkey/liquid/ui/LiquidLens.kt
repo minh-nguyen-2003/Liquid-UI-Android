@@ -180,11 +180,12 @@ internal class LiquidLens(private val view: View) {
     }
 
     /**
-     * Dựng lưới bẻ cong cho ảnh thấu kính cỡ [lensWidth] x [lensHeight]. Mặt kính phẳng với vành mép vát theo cung tròn rộng b =
-     * [bevelWidth] (không quá nửa cạnh ngắn): với mỗi đỉnh lưới p trên view,
+     * Dựng lưới bẻ cong cho ảnh thấu kính cỡ [lensWidth] x [lensHeight]. Mặt kính phẳng với vành mép vát cong rộng b = [bevelWidth]
+     * (không quá nửa cạnh ngắn): với mỗi đỉnh lưới p trên view,
      * - e = độ sâu của p tính từ mép hình kính (chữ nhật bo góc; 0 ở mép), n = hướng vuông góc với mép gần nhất, chỉ ra ngoài;
-     * - trong vành (e < b): t = 1 − e / b, độ dốc mặt kính theo cung tròn nên p hiện phần nền ở `p − n · refraction · b · (1 − √(1 − t²))`
-     *   — vừa vào vành thì gần như không lệch, sát mép thì lệch mạnh vào trong (nội dung bị ép và lật như qua mép kính dày);
+     * - trong vành (e < b): t = 1 − e / b, p hiện phần nền ở `p − n · refraction · b · t²` — vừa vào vành thì gần như không lệch, càng ra
+     *   mép càng lệch vào trong, tới mép thì nội dung lật ngược như qua mép kính dày. Độ lệch tăng theo t² (không dốc đứng ở mép như
+     *   cung tròn) để hình sát mép không bị nén quá mức thành lấm chấm;
      * - ngoài vành (e ≥ b): giữ nguyên.
      * Sau đó thu về quanh tâm theo [zoom]. Trường khoảng cách dùng bo góc không nhỏ hơn b để hướng n đổi mượt quanh góc.
      */
@@ -246,7 +247,7 @@ internal class LiquidLens(private val view: View) {
                 val depth = -distance
                 if (bevel > 0f && depth < bevel) {
                     val t = (1f - depth / bevel).coerceIn(0f, 1f)
-                    val shift = strength * (1f - sqrt(1f - t * t))
+                    val shift = strength * t * t
                     sourceX -= normalX * shift
                     sourceY -= normalY * shift
                 }

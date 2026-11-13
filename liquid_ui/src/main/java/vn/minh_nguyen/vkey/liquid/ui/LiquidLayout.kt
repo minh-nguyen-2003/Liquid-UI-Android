@@ -12,6 +12,8 @@ import android.util.AttributeSet
 import android.view.View
 import android.view.ViewOutlineProvider
 import android.view.ViewTreeObserver
+import android.view.animation.DecelerateInterpolator
+import android.view.animation.OvershootInterpolator
 import android.widget.FrameLayout
 import androidx.core.content.ContextCompat
 
@@ -31,7 +33,12 @@ import androidx.core.content.ContextCompat
  *   app:lgv_highlight            — false: tắt hẳn viền sáng lẫn quầng sáng (mặc định true)
  *   app:lgv_glow                 — quầng sáng mềm loang vào trong (tắt được cho item list)
  *   app:lgv_clipContent          — bo góc luôn content bên trong (mặc định true)
- *   app:lgv_mode                 — `tint` (mặc định) hoặc `lens`, xem [LiquidGlassMode]
+ *   app:lgv_mode                 — `tint` (mặc định), `blur` hoặc `lens`, xem [LiquidGlassMode]
+ *   app:lgv_blurRadius           — (blur) độ mờ của nền, mặc định 4dp
+ *   app:lgv_backdrop             — (blur) `all` (mặc định) làm mờ mọi thứ phía sau, `media` chỉ video / ảnh phủ màn
+ *   app:lgv_edgeRefraction       — (blur) bẻ cong nền mờ ở mép, kéo cả vành nền ngoài view vào (0 = tắt, mặc định)
+ *   app:lgv_blurSaturation       — (blur) độ đậm màu của nền mờ (1 = giữ nguyên, mặc định)
+ *   app:lgv_pressScale           — view bấm được thì lún còn chừng này khi giữ (1 = không lún, mặc định)
  *   app:lgv_bevelWidth           — (lens) bề rộng vành mép vát tròn, phần bị bẻ cong
  *   app:lgv_refraction           — (lens) độ bẻ cong ở vành mép; 0 = không bẻ
  *   app:lgv_lensZoom             — (lens) phóng to nội dung phía sau quanh tâm (1 = không phóng)
@@ -44,10 +51,15 @@ import androidx.core.content.ContextCompat
  * hình trong kính chạy theo. Chế độ này tốn hơn `tint` (vẽ lại phần giao diện nằm sau view): hợp
  * với nút, thanh nổi, kính lúp; đừng dùng cho hàng chục item trong list.
  *
+ * Chế độ `blur` ([LiquidGlassMode.BLUR]) là kính mờ kiểu iOS: làm mờ thật mọi thứ phía sau (giao diện
+ * thường lẫn video vẽ bằng `TextureView`) rồi phủ lớp màu và vệt sáng lên trên. Nền lấy từ một ảnh mờ
+ * dùng chung cho mọi view cùng cửa sổ ([GlassBackdrop]) nên nhẹ, đặt được nhiều view cùng lúc. View
+ * nằm trong hộp thoại / bottom sheet thì đặt [backdropRoot] là nội dung của màn phía sau.
+ *
  * Lưu ý:
  * - Chế độ `tint`: view **không đụng tới nội dung phía sau**; nó chỉ phủ một lớp đen mờ + vệt sáng
  *   vẽ bằng Canvas, nhờ vậy dùng được ở mọi nơi (kể cả item RecyclerView) mà không cần `Activity`.
- * - View **không blur**. Cần kính mờ thì dùng [GlassLayout] / [LiquidGlassLayout].
+ * - `GlassLayout`, `GlassLensLayout`, `LiquidGlassLayout` cũ đã gom vào view này (chế độ `blur` / `lens`).
  * - Vệt sáng **không tự đảo chiều theo RTL**.
  */
 class LiquidLayout @JvmOverloads constructor(
@@ -155,14 +167,68 @@ class LiquidLayout @JvmOverloads constructor(
             invalidate()
         }
 
-    /** Chế độ nền: [LiquidGlassMode.TINT] (mặc định) hoặc [LiquidGlassMode.LENS] (bẻ cong nền thật ở vành mép). */
+    /**
+     * Chế độ nền: [LiquidGlassMode.TINT] (mặc định, không đụng tới nội dung phía sau), [LiquidGlassMode.BLUR] (kính mờ) hoặc
+     * [LiquidGlassMode.LENS] (thấu kính: nền nét, bẻ cong thật ở vành mép).
+     */
     var mode: Int = LiquidGlassMode.TINT
         set(value) {
             if (field == value) return
+            val old = field
             field = value
-            if (value != LiquidGlassMode.LENS) lens.release()
+            if (old == LiquidGlassMode.LENS) lens.release()
+            if (old == LiquidGlassMode.BLUR && isAttachedToWindow) blur.release(backdropRoot ?: rootView)
             invalidate()
         }
+
+    /** View có lấy nền phía sau (mờ hoặc thấu kính): khi đó nó và content của nó không được chụp vào nền. */
+    internal val capturesBackdrop: Boolean get() = mode != LiquidGlassMode.TINT
+
+    /**
+     * (blur) Độ mờ của nền (px): độ lệch chuẩn của mờ Gauss, như `blur()` của CSS — càng lớn nền càng nhoè. 0 = không làm mờ thêm (nền
+     * vẫn hơi mềm vì chụp thu nhỏ). Mặc định 4dp.
+     */
+    var blurRadius: Float = resources.displayMetrics.density * DEFAULT_BLUR_DP
+        set(value) {
+            val clamped = value.coerceAtLeast(0f)
+            if (field == clamped) return
+            field = clamped
+            invalidate()
+        }
+
+    /**
+     * (blur) Làm mờ những gì phía sau: [GlassBackdropMode.ALL] (mặc định) = mọi thứ đang hiện, cả giao diện thường lẫn video;
+     * [GlassBackdropMode.MEDIA] = chỉ video và ảnh phủ màn (nhẹ hơn).
+     */
+    var backdropMode: Int = GlassBackdropMode.ALL
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
+
+    /**
+     * (blur) Bẻ cong nền mờ ở mép: mép kéo vào phần nền nằm ngoài view tới [edgeRefraction] lần nửa cạnh ngắn, càng gần mép càng dồn
+     * nén, giữa view gần như phẳng. 0 (mặc định) = nền mờ phẳng. Kiểu bẻ cong của `GlassLensLayout` / `LiquidGlassLayout` cũ (0.8).
+     */
+    var edgeRefraction: Float = 0f
+        set(value) {
+            val clamped = value.coerceAtLeast(0f)
+            if (field == clamped) return
+            field = clamped
+            invalidate()
+        }
+
+    /** (blur) Độ đậm màu của nền đã làm mờ; 1 (mặc định) = giữ nguyên, kính kiểu iOS dùng khoảng 1.4. */
+    var blurSaturation: Float = 1f
+        set(value) {
+            if (field == value) return
+            field = value
+            invalidate()
+        }
+
+    /** View bấm được thì lún còn chừng này khi giữ, thả ra nảy về (không dùng ripple); 1 (mặc định) = không lún. */
+    var pressScale: Float = 1f
 
     /** (lens) Bề rộng vành mép vát tròn (px) — chỉ phần này bị bẻ cong, phía trong là mặt kính phẳng. Không quá nửa cạnh ngắn. */
     var bevelWidth: Float = 0f
@@ -207,27 +273,46 @@ class LiquidLayout @JvmOverloads constructor(
         }
 
     /**
-     * (lens) Gốc của phần nội dung nhìn qua kính; `null` (mặc định) = gốc cửa sổ chứa view này. View nằm trong cửa sổ khác với nội dung
-     * phía sau (hộp thoại, bottom sheet, popup) thì đặt là view nội dung của màn phía sau.
+     * (blur, lens) Gốc của phần nội dung nằm sau kính; `null` (mặc định) = gốc cửa sổ chứa view này. View nằm trong cửa sổ khác với nội
+     * dung phía sau (hộp thoại, bottom sheet, popup) thì đặt là view nội dung của màn phía sau, vd
+     * `activity.findViewById(android.R.id.content)`.
      */
     var backdropRoot: View? = null
         set(value) {
+            if (field !== value && isAttachedToWindow) blur.release(field ?: rootView)
             field = value
             invalidate()
         }
 
-    /** Phần thấu kính của chế độ [LiquidGlassMode.LENS] (dùng chung với [GlassLayout]). */
+    /** Phần thấu kính của chế độ [LiquidGlassMode.LENS] và phần nền mờ của chế độ [LiquidGlassMode.BLUR]. */
     private val lens = LiquidLens(this)
+    private val blur = GlassBlur(this)
 
-    /** Trước mỗi lượt vẽ của cửa sổ: thấu kính chụp lại nền và bẻ cong lại (tự giới hạn tần suất, xem [LiquidLens.update]). */
+    /**
+     * Trước mỗi lượt vẽ của cửa sổ: thấu kính chụp lại nền và bẻ cong lại ([LiquidLens.update]); kính mờ cập nhật ảnh nền mờ dùng chung
+     * ([GlassBlur.onPreDraw]). Cả hai tự giới hạn tần suất; chế độ tint không làm gì.
+     */
     private val preDrawListener = ViewTreeObserver.OnPreDrawListener {
-        if (mode == LiquidGlassMode.LENS) {
-            lens.update(
+        when (mode) {
+            LiquidGlassMode.LENS -> lens.update(
                 backdropRoot ?: rootView, bevelWidth, refraction, lensZoom,
                 LiquidGlassGeometry.resolveRadius(isPill, cornerRadius, width.toFloat(), height.toFloat()), lensBlur
             )
+            LiquidGlassMode.BLUR -> {
+                syncBlur()
+                blur.onPreDraw(backdropRoot ?: rootView, all = backdropMode == GlassBackdropMode.ALL)
+            }
         }
         true
+    }
+
+    /** Đẩy thông số hiện tại sang phần nền mờ. */
+    private fun syncBlur() {
+        blur.enabled = mode == LiquidGlassMode.BLUR
+        blur.blurRadius = blurRadius
+        blur.refraction = edgeRefraction
+        blur.zoom = lensZoom
+        blur.saturation = blurSaturation
     }
 
     init {
@@ -273,6 +358,11 @@ class LiquidLayout @JvmOverloads constructor(
         refraction = ta.getFloat(R.styleable.LiquidLayout_lgv_refraction, DEFAULT_REFRACTION)
         lensZoom = ta.getFloat(R.styleable.LiquidLayout_lgv_lensZoom, 1f)
         lensBlur = ta.getDimension(R.styleable.LiquidLayout_lgv_lensBlur, 0f)
+        blurRadius = ta.getDimension(R.styleable.LiquidLayout_lgv_blurRadius, blurRadius)
+        backdropMode = ta.getInt(R.styleable.LiquidLayout_lgv_backdrop, backdropMode)
+        edgeRefraction = ta.getFloat(R.styleable.LiquidLayout_lgv_edgeRefraction, 0f)
+        blurSaturation = ta.getFloat(R.styleable.LiquidLayout_lgv_blurSaturation, 1f)
+        pressScale = ta.getFloat(R.styleable.LiquidLayout_lgv_pressScale, 1f)
         ta.recycle()
 
         refreshOutline()
@@ -330,12 +420,25 @@ class LiquidLayout @JvmOverloads constructor(
     }
 
     /**
-     * Đang chụp nền cho view kính ([GlassBackdrop.CaptureCanvas]) mà view này là thấu kính: không vẽ gì, để nó và content của nó không
-     * lẫn vào hình nhìn qua chính nó (hay qua thấu kính khác).
+     * Đang chụp nền cho view kính ([GlassBackdrop.CaptureCanvas]) mà view này cũng là kính (mờ hoặc thấu kính): không vẽ gì, để nó và
+     * content của nó không lẫn vào nền của chính nó (hay của view kính khác).
      */
     override fun draw(canvas: Canvas) {
-        if (mode == LiquidGlassMode.LENS && canvas is GlassBackdrop.CaptureCanvas) return
+        if (capturesBackdrop && canvas is GlassBackdrop.CaptureCanvas) return
         super.draw(canvas)
+    }
+
+    /** Giữ: lún nhẹ còn [pressScale]; thả: nảy về đúng cỡ. Chỉ khi view bấm được và [pressScale] < 1. */
+    override fun setPressed(pressed: Boolean) {
+        val changed = pressed != isPressed
+        super.setPressed(pressed)
+        if (!changed || !isClickable || pressScale >= 1f) return
+        animate().cancel()
+        if (pressed) {
+            animate().scaleX(pressScale).scaleY(pressScale).setDuration(PRESS_MS).setInterpolator(DecelerateInterpolator()).start()
+        } else {
+            animate().scaleX(1f).scaleY(1f).setDuration(RELEASE_MS).setInterpolator(OvershootInterpolator(2.5f)).start()
+        }
     }
 
     override fun onAttachedToWindow() {
@@ -346,6 +449,7 @@ class LiquidLayout @JvmOverloads constructor(
     override fun onDetachedFromWindow() {
         viewTreeObserver.removeOnPreDrawListener(preDrawListener)
         lens.release()
+        blur.release(backdropRoot ?: rootView)
         super.onDetachedFromWindow()
     }
 
@@ -372,7 +476,13 @@ class LiquidLayout @JvmOverloads constructor(
 
         val radius = LiquidGlassGeometry.resolveRadius(isPill, cornerRadius, w, h)
 
-        if (mode == LiquidGlassMode.LENS) lens.draw(canvas, w, h, radius, clip = !isClipContent)
+        when (mode) {
+            LiquidGlassMode.LENS -> lens.draw(canvas, w, h, radius, clip = !isClipContent)
+            LiquidGlassMode.BLUR -> {
+                syncBlur()
+                blur.draw(canvas, backdropRoot ?: rootView, w, h, radius, clip = !isClipContent)
+            }
+        }
 
         drawRect.set(0f, 0f, w, h)
         fillPaint.color = glassColor
@@ -415,5 +525,11 @@ class LiquidLayout @JvmOverloads constructor(
     companion object {
         private const val DEFAULT_HIGHLIGHT_ALPHA = 0.55f
         private const val DEFAULT_REFRACTION = 1f
+
+        /** Độ mờ mặc định của chế độ blur: mờ Gauss độ lệch chuẩn 4dp. */
+        private const val DEFAULT_BLUR_DP = 4f
+
+        private const val PRESS_MS = 110L
+        private const val RELEASE_MS = 320L
     }
 }

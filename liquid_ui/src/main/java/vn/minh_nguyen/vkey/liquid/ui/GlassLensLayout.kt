@@ -4,6 +4,8 @@ import android.content.Context
 import android.util.AttributeSet
 
 /**
+ * **Đã gom vào [LiquidLayout]** (chế độ `blur` + `lgv_edgeRefraction`, hoặc chế độ `lens`); giữ lại để các layout cũ chạy tiếp.
+ *
  * Khung kính làm mờ + bẻ cong ("glass lens", không có viền sáng / ánh trượt kiểu liquid): như [GlassLayout] — làm mờ thật nội dung phía
  * sau, kể cả video — và bẻ cong nền ở mép như thấu kính (khúc xạ theo đúng hình tròn / pill / chữ nhật bo góc), nền phóng nhẹ 12 % và
  * đậm màu hơn 40 %.
@@ -13,6 +15,11 @@ import android.util.AttributeSet
  *
  * Lớp con [LiquidGlassLayout] thêm viền sáng + ánh trượt kiểu liquid.
  */
+@Suppress("DEPRECATION")
+@Deprecated(
+    "Đã gom vào LiquidLayout: dùng LiquidLayout với app:lgv_mode=\"blur\", app:lgv_edgeRefraction=\"0.8\", " +
+        "app:lgv_lensZoom=\"1.12\", app:lgv_blurSaturation=\"1.4\", app:lgv_highlight=\"false\"; hoặc app:lgv_mode=\"lens\"."
+)
 open class GlassLensLayout @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : GlassLayout(context, attrs, defStyleAttr) {

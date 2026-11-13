@@ -23,7 +23,7 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /**
- * Ảnh nền mờ dùng chung cho mọi [GlassLayout] (và lớp con) có cùng gốc nền: bản chụp thu nhỏ 1/[SCALE] của những thứ nằm sau các view
+ * Ảnh nền mờ dùng chung cho mọi view kính mờ ([LiquidLayout] chế độ blur, [GlassLayout] và lớp con) có cùng gốc nền: bản chụp thu nhỏ 1/[SCALE] của những thứ nằm sau các view
  * kính, rồi làm mờ. Mỗi view kính vẽ lại đúng phần ảnh nằm sau nó, phóng to lên nên ra lớp kính mờ kiểu iOS. Hai chế độ chụp:
  * - **toàn bộ** ([GlassBackdropMode.ALL]): mọi thứ đang hiện trong cây view của gốc nền — giao diện thường (danh sách, chữ, ảnh…) vẽ lại
  *   vào Canvas thường, khung hình video (TextureView không tự vẽ vào Canvas thường nên đọc bằng `getBitmap`) ghép đúng vị trí và đúng thứ
@@ -33,7 +33,7 @@ import kotlin.math.sqrt
  *
  * Chỉ làm đúng phần cần: mỗi lượt chụp chỉ vẽ lại và làm mờ các vùng nằm sau những view kính đang hiện (cộng một vành đệm), nên vài nút
  * nhỏ trên màn hình tốn rất ít. Làm mờ bằng [BLUR_PASSES] lượt mờ hộp chồng nhau — gần với mờ Gauss, mịn, không lộ ô vuông — với độ mờ
- * riêng của từng view ([GlassLayout.blurRadius]).
+ * riêng của từng view ([GlassBlur.blurRadius]).
  *
  * Cập nhật theo lượt vẽ: gọi từ `onPreDraw` của các view kính, tối đa một lần mỗi [MIN_INTERVAL_MS] (theo kịp từng khung hình ở 60 Hz nên
  * nền mờ không trễ sau nội dung đang cuộn); view kính vừa hiện / vừa đổi chỗ thì chụp ngay. Màn hình đứng yên thì không chụp. View kính ở
@@ -75,7 +75,7 @@ class GlassBackdrop private constructor() {
         var active = false
     }
 
-    private val regions = WeakHashMap<GlassLayout, Region>()
+    private val regions = WeakHashMap<GlassBlur, Region>()
     private val probe = RectF()
 
     /** Ảnh chụp chưa làm mờ (đích của [canvas]); [bitmap] nhận phần đã làm mờ. */
@@ -89,7 +89,7 @@ class GlassBackdrop private constructor() {
     private val rootListener = ViewTreeObserver.OnPreDrawListener {
         rootDirty = true
         // Màn phía sau vừa đổi: cho view kính ở cửa sổ khác một lượt vẽ để nó chụp lại nền
-        for ((view, region) in regions) if (region.otherWindow) view.invalidate()
+        for ((client, region) in regions) if (region.otherWindow) client.view.invalidate()
         true
     }
 
@@ -112,24 +112,24 @@ class GlassBackdrop private constructor() {
      * đa một lần mỗi [MIN_INTERVAL_MS]. Mỗi lượt chụp làm mới vùng của mọi view kính đang hiện, nên nhiều view cùng đổi chỗ trong một
      * khung hình (hàng nút đang cuộn) vẫn chỉ chụp một lần. [all] = [view] cần chụp toàn bộ giao diện.
      */
-    fun update(root: View, view: GlassLayout, all: Boolean = false) {
+    internal fun update(root: View, client: GlassBlur, all: Boolean = false) {
         var force = false
         if (all && !captureAll) {
             captureAll = true
             force = true
         }
-        if (!view.backdropRegion(root, probe)) {
-            regions.remove(view)
+        if (!client.backdropRegion(root, probe)) {
+            regions.remove(client)
             return
         }
-        val sameWindow = view.rootView === root.rootView
+        val sameWindow = client.view.rootView === root.rootView
         if (!sameWindow) observe(root)
-        var region = regions[view]
+        var region = regions[client]
         if (region == null) {
             region = Region()
-            regions[view] = region
+            regions[client] = region
             force = true
-        } else if (region.bounds != probe || region.sigma != view.blurRadius) {
+        } else if (region.bounds != probe || region.sigma != client.blurRadius) {
             force = true
         }
         region.otherWindow = !sameWindow
@@ -235,9 +235,9 @@ class GlassBackdrop private constructor() {
         generation++
     }
 
-    /** [view] không dùng nền này nữa (rời cửa sổ). */
-    fun release(view: GlassLayout) {
-        regions.remove(view)
+    /** [client] không dùng nền này nữa (rời cửa sổ). */
+    internal fun release(client: GlassBlur) {
+        regions.remove(client)
     }
 
     /**
@@ -294,13 +294,17 @@ class GlassBackdrop private constructor() {
         return ((side - 1f) / 2f).roundToInt().coerceIn(1, MAX_BOX_RADIUS)
     }
 
+    /** [view] là view kính có lấy nền (mờ hoặc thấu kính): không chụp nó và content của nó vào nền. */
+    @Suppress("DEPRECATION")
+    private fun isGlass(view: View) = view is GlassLayout || (view is LiquidLayout && view.capturesBackdrop)
+
     /** [view] có đang hiện không (ẩn, trong suốt hẳn hoặc chưa có kích thước thì bỏ qua cả nhánh). */
     private fun isDrawable(view: View) =
         view.visibility == View.VISIBLE && view.alpha > 0f && view.width > 0 && view.height > 0
 
     /** Ghi vào [videoBranches] mọi view trên đường từ [view] xuống các TextureView đang có hình; trả về nhánh này có video không. */
     private fun collectVideoBranches(view: View): Boolean {
-        if (!isDrawable(view) || view is GlassLayout) return false
+        if (!isDrawable(view) || isGlass(view)) return false
         var hasVideo = false
         if (view is TextureView) {
             hasVideo = view.isAvailable
@@ -320,7 +324,7 @@ class GlassBackdrop private constructor() {
      * View nằm ngoài các vùng cần chụp thì bỏ qua.
      */
     private fun drawTree(view: View, parent: View?, canvas: Canvas) {
-        if (!isDrawable(view) || view is GlassLayout) return
+        if (!isDrawable(view) || isGlass(view)) return
         val width = view.width.toFloat()
         val height = view.height.toFloat()
         val save = canvas.save()
@@ -375,7 +379,7 @@ class GlassBackdrop private constructor() {
     private fun drawSources(view: View, root: View, canvas: Canvas) {
         if (view.visibility != View.VISIBLE || view.alpha <= 0f || view.width <= 0 || view.height <= 0) return
         when {
-            view is GlassLayout -> return
+            isGlass(view) -> return
             view is TextureView -> drawTexture(view, root, canvas)
             view is ImageView ->
                 if (view.width.toLong() * view.height >= root.width.toLong() * root.height / 2) drawImage(view, root, canvas)

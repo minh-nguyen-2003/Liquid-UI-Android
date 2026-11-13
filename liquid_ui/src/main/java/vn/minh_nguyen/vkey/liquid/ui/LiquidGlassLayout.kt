@@ -18,6 +18,8 @@ import kotlin.math.pow
 import kotlin.math.sin
 
 /**
+ * **Đã gom vào [LiquidLayout]** (chế độ `blur` / `lens` + `lgv_pressScale`); giữ lại để các layout cũ chạy tiếp.
+ *
  * Nút / khung "liquid glass" đầy đủ (kiểu iOS): kính làm mờ + bẻ cong của [GlassLensLayout] cộng thêm phần "liquid" vẽ trên mặt kính.
  * Khác [LiquidLayout] (liquid không blur, dùng được mọi nơi): view này làm mờ video / ảnh phủ màn nằm sau nó nên hợp với nút nổi trên
  * trình phát video. Lớp kính gồm, từ dưới lên:
@@ -32,6 +34,11 @@ import kotlin.math.sin
  * XML: `app:lgl_color`, `app:lgl_cornerRadius`, `app:lgl_rimWidth`, `app:lgl_rimColor`, `app:lgl_rimAlpha`, `app:lgl_lightAngle`,
  * `app:lgl_sheenAlpha`, `app:lgl_pressScale`, `app:lgl_blur`, `app:lgl_refraction`.
  */
+@Suppress("DEPRECATION")
+@Deprecated(
+    "Đã gom vào LiquidLayout: dùng LiquidLayout với app:lgv_mode=\"blur\" (hoặc \"lens\") và app:lgv_pressScale=\"0.92\"; " +
+        "viền sáng là phần vệt sáng sẵn có của LiquidLayout."
+)
 class LiquidGlassLayout @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : GlassLensLayout(context, attrs, defStyleAttr) {

@@ -26,7 +26,24 @@
             <enum name="tint" value="0" />
             <!-- Thấu kính thật: nội dung phía sau nét nguyên ở giữa, bị bẻ cong ở vành mép -->
             <enum name="lens" value="1" />
+            <!-- Kính mờ: làm mờ thật mọi thứ phía sau (giao diện + video) -->
+            <enum name="blur" value="2" />
         </attr>
+        <!-- (blur) Độ mờ của nền: độ lệch chuẩn của mờ Gauss (như blur() của CSS); mặc định 4dp -->
+        <attr name="lgv_blurRadius" format="dimension" />
+        <!-- (blur) Làm mờ những gì phía sau. Giá trị enum phải khớp hằng số trong GlassBackdropMode -->
+        <attr name="lgv_backdrop">
+            <!-- Mọi thứ đang hiện: giao diện thường lẫn video (mặc định) -->
+            <enum name="all" value="0" />
+            <!-- Chỉ video (TextureView) và ảnh phủ ít nhất nửa cửa sổ; nhẹ hơn -->
+            <enum name="media" value="1" />
+        </attr>
+        <!-- (blur) Bẻ cong nền mờ ở mép: mép với tới vành nền ngoài view bằng chừng này lần nửa cạnh ngắn; mặc định 0 = tắt -->
+        <attr name="lgv_edgeRefraction" format="float" />
+        <!-- (blur) Độ đậm màu của nền mờ; mặc định 1 = giữ nguyên -->
+        <attr name="lgv_blurSaturation" format="float" />
+        <!-- View bấm được thì lún còn chừng này khi giữ; mặc định 1 = không lún -->
+        <attr name="lgv_pressScale" format="float" />
         <!-- (lens) Bề rộng vành mép vát tròn, phần bị bẻ cong; mặc định 12dp -->
         <attr name="lgv_bevelWidth" format="dimension" />
         <!-- (lens) Độ bẻ cong: sát mép hiện phần nền nằm sâu vào trong chừng này lần bề rộng vành; 0 = không bẻ; mặc định 1 -->

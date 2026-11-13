@@ -169,8 +169,8 @@
             style="@style/SectionLabel"
             android:text="@string/section_lens" />
 
-        <!-- Chữ nằm dưới, hai tấm kính lens đè lên: giữa kính chữ nét nguyên, vành mép 12dp bị bẻ cong. Kính tròn bên phải phóng 1,4 lần
-             như kính lúp. lgv_backgroundColor trong suốt để thấy rõ phần khúc xạ -->
+        <!-- Chữ nằm dưới, các tấm kính lens đè lên: giữa kính chữ nét nguyên, vành mép 12dp bị bẻ cong. Kính tròn trơn đặt đúng tâm trên
+             dòng chữ lớn, phóng 1,4 lần như kính lúp (kính lúp chỉ thấy vùng quanh tâm nó). lgv_backgroundColor trong suốt để thấy rõ phần khúc xạ -->
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
@@ -192,6 +192,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
+                    android:layout_marginBottom="26dp"
                     android:maxLines="1"
                     android:text="@string/lens_sample"
                     android:textColor="@android:color/white"
@@ -213,6 +214,7 @@
                 android:layout_height="64dp"
                 android:layout_gravity="start|bottom"
                 android:layout_marginStart="24dp"
+                android:layout_marginBottom="16dp"
                 app:gl_lensBlur="4dp"
                 app:gl_mode="lens"
                 app:lgl_color="@android:color/transparent" />
@@ -220,15 +222,56 @@
             <vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
                 android:layout_width="96dp"
                 android:layout_height="96dp"
-                android:layout_gravity="end|bottom"
-                android:layout_marginEnd="24dp"
+                android:layout_gravity="start|bottom"
+                android:layout_marginStart="88dp"
                 app:lgv_backgroundColor="@android:color/transparent"
                 app:lgv_bevelWidth="16dp"
                 app:lgv_highlight="false"
                 app:lgv_lensZoom="1.4"
                 app:lgv_mode="lens"
+                app:lgv_pill="true" />
+        </FrameLayout>
+
+        <!-- ================= blur ================= -->
+
+        <TextView
+            style="@style/SectionLabel"
+            android:text="@string/section_blur" />
+
+        <!-- Chữ nằm dưới, kính mờ đè lên: thanh pill mờ phẳng và nút tròn mờ có bẻ cong ở mép + lún khi bấm -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:lineSpacingMultiplier="1.2"
+                android:text="@string/lens_text"
+                android:textColor="@android:color/white"
+                android:textSize="14sp" />
+
+            <vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
+                android:layout_width="150dp"
+                android:layout_height="52dp"
+                android:layout_marginStart="24dp"
+                android:layout_marginTop="8dp"
+                app:lgv_mode="blur"
+                app:lgv_pill="true" />
+
+            <vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_gravity="end|bottom"
+                android:layout_marginEnd="24dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:lgv_blurSaturation="1.4"
+                app:lgv_edgeRefraction="0.8"
+                app:lgv_lensZoom="1.12"
+                app:lgv_mode="blur"
                 app:lgv_pill="true"
-                app:lgv_refraction="1.3" />
+                app:lgv_pressScale="0.92" />
         </FrameLayout>
 
         <!-- ================= card ================= -->

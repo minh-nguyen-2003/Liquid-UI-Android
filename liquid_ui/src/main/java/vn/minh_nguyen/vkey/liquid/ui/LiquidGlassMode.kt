@@ -16,4 +16,10 @@ object LiquidGlassMode {
      * riêng vành mép bị bẻ cong (khúc xạ) theo đúng hình kính.
      */
     const val LENS = 1
+
+    /**
+     * Kính mờ: làm mờ thật mọi thứ phía sau như kính iOS (giao diện thường lẫn video), lấy từ ảnh nền mờ dùng chung nên nhẹ, dùng được
+     * cho nhiều view cùng lúc. Trước đây là `GlassLayout` / `LiquidGlassLayout`.
+     */
+    const val BLUR = 2
 }

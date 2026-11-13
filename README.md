@@ -4,6 +4,9 @@
 theo mép (bevel sáng/tối như kính thật) + quầng sáng mềm. Bọc content vào là có ngay giao diện
 liquid — không cần drawable, không cần `Activity`, dùng được cả trong item `RecyclerView`.
 
+Một view, ba chế độ nền (`app:lgv_mode`): `tint` (mặc định, chỉ lớp màu), `blur` (kính mờ thật)
+và `lens` (thấu kính bẻ cong thật ở vành mép).
+
 Library id: `vn.minh_nguyen.vkey.liquid.ui`
 
 ## Demo
@@ -81,7 +84,7 @@ trên-trái, có quầng sáng.
 | `lgv_highlight` | boolean | `true` | `false`: tắt hẳn viền sáng lẫn quầng sáng. |
 | `lgv_glow` | boolean | `true` | Quầng sáng mềm loang vào trong. Tắt cho item list cuộn nhiều. |
 | `lgv_clipContent` | boolean | `true` | Bo góc luôn content bên trong (`clipToOutline`). |
-| `lgv_mode` | enum | `tint` | `tint`: chỉ lớp màu + vệt sáng. `lens`: bẻ cong nền thật ở vành mép — xem mục "Chế độ lens". |
+| `lgv_mode` | enum | `tint` | `tint`: chỉ lớp màu + vệt sáng. `blur`: kính mờ — xem "Chế độ blur". `lens`: bẻ cong nền thật ở vành mép — xem "Chế độ lens". |
 | `lgv_bevelWidth` | dimension | `12dp` | (lens) Bề rộng vành mép vát tròn, phần bị bẻ cong. Tự clamp về nửa cạnh ngắn. |
 | `lgv_refraction` | float | `1` | (lens) Độ bẻ cong: sát mép hiện phần nền nằm sâu vào trong chừng này lần bề rộng vành. `0` = không bẻ. |
 | `lgv_lensZoom` | float | `1` | (lens) Phóng to nội dung phía sau quanh tâm như kính lúp. `1` = không phóng. |
@@ -114,7 +117,7 @@ Mỗi attribute đều có một property tương ứng, set xong tự `invalida
 | `isHighlightEnabled` | `Boolean` | `false` = không vẽ viền sáng lẫn quầng sáng. |
 | `isGlowEnabled` | `Boolean` | |
 | `isClipContent` | `Boolean` | |
-| `mode` | `Int` | Nhận hằng số `LiquidGlassMode` (`TINT` / `LENS`). |
+| `mode` | `Int` | Nhận hằng số `LiquidGlassMode` (`TINT` / `BLUR` / `LENS`). |
 | `bevelWidth` | `Float` | px. Chỉ dùng ở chế độ lens. |
 | `refraction` | `Float` | Chỉ dùng ở chế độ lens. |
 | `lensZoom` | `Float` | Chỉ dùng ở chế độ lens; nhỏ nhất 1. |
@@ -151,7 +154,7 @@ Tạo hoàn toàn bằng code cũng được (dùng như `FrameLayout`):
 Mặc định (`tint`) `LiquidLayout` không đụng tới nội dung phía sau. Bật `lgv_mode="lens"` thì nó
 thành một tấm kính thật: **mặt kính phẳng, vành mép vát tròn**. Nội dung phía sau hiện nét nguyên
 ở giữa; riêng vành mép rộng `lgv_bevelWidth` bị khúc xạ theo đúng hình kính (tròn, pill, chữ nhật
-bo góc) — chữ, ảnh sát mép bị ép lại và lật ngược như nhìn qua mép kính dày. Không làm mờ.
+bo góc) — chữ, ảnh sát mép bị ép lại và lật ngược như nhìn qua mép kính dày. Mặc định không làm mờ.
 
 ```xml
 <vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
@@ -219,24 +222,74 @@ Trong code: `mode = GlassMode.LENS`, `bevelWidth`, `lensRefraction`, `lensZoom`,
 độ này `gl_blur`, `gl_blurRadius`, `gl_backdrop`, `gll_refraction` / `lgl_refraction` không dùng tới;
 độ mờ của nền qua thấu kính chỉnh bằng `gl_lensBlur`.
 
-## Chọn view nào
+## Chế độ blur — kính mờ
 
-"Liquid" = viền sáng / ánh trượt vẽ trên mặt kính. "Glass" = làm mờ thật nội dung phía sau (kể cả
-video). Tên view có chữ nào thì có phần đó:
+`app:lgv_mode="blur"` biến `LiquidLayout` thành kính mờ kiểu iOS: làm mờ thật mọi thứ phía sau
+(giao diện thường lẫn video vẽ bằng `TextureView`), rồi phủ lớp màu và vệt sáng lên trên.
 
-| View | Liquid (viền sáng) | Glass (làm mờ nền) | Bẻ cong ở mép |
-|---------------------|:---:|:---:|:---:|
-| `LiquidLayout` | có | không | không |
-| `LiquidLayout` + `lgv_mode="lens"` | có | không (nền nét) | có, chỉ ở vành mép |
-| `GlassLayout` | không | có | không |
-| `GlassLensLayout` | không | có | có |
-| `LiquidGlassLayout` | có | có | có |
-| ba view kính + `gl_mode="lens"` | như trên | không (nền nét) | có, chỉ ở vành mép |
+```xml
+<vn.minh_nguyen.vkey.liquid.ui.LiquidLayout
+    android:layout_width="56dp"
+    android:layout_height="56dp"
+    android:clickable="true"
+    app:lgv_mode="blur"
+    app:lgv_pill="true"
+    app:lgv_pressScale="0.92" />
+```
 
-`GlassLensLayout` kế thừa `GlassLayout`, `LiquidGlassLayout` kế thừa `GlassLensLayout`, nên phần
-"Nền được lấy từ đâu" và "Chi phí" ở mục dưới áp dụng cho cả ba.
+| Attribute | Kiểu | Mặc định | Mô tả |
+|---|---|---|---|
+| `lgv_blurRadius` | dimension | `4dp` | Độ mờ của nền (mờ Gauss, như `blur()` của CSS). |
+| `lgv_backdrop` | enum | `all` | `all`: làm mờ mọi thứ phía sau. `media`: chỉ video và ảnh phủ màn, nhẹ hơn. |
+| `lgv_edgeRefraction` | float | `0` | Bẻ cong nền mờ ở mép, kéo cả vành nền ngoài view vào. `0` = nền mờ phẳng. |
+| `lgv_blurSaturation` | float | `1` | Độ đậm màu của nền mờ; kính kiểu iOS dùng khoảng `1.4`. |
+| `lgv_lensZoom` | float | `1` | Phóng nền quanh tâm (dùng chung với chế độ lens). |
+| `lgv_pressScale` | float | `1` | View bấm được thì lún còn chừng này khi giữ (mọi chế độ). `1` = không lún. |
 
-## GlassLayout / GlassLensLayout — kính thuần, không liquid
+Trong code: `mode = LiquidGlassMode.BLUR`, `blurRadius`, `backdropMode`, `edgeRefraction`,
+`blurSaturation`, `pressScale`, `backdropRoot`.
+
+- Nền lấy từ một ảnh mờ dùng chung cho mọi view cùng cửa sổ, chụp thu nhỏ 1/4 và chỉ chụp các vùng
+  nằm sau view kính, nên nhẹ: đặt được nhiều view cùng lúc. Phần "Nền được lấy từ đâu" và "Chi phí"
+  ở mục view cũ bên dưới vẫn đúng cho chế độ này.
+- View nằm trong hộp thoại / bottom sheet thì đặt `backdropRoot` là nội dung của màn phía sau.
+- Khác chế độ lens có `lgv_lensBlur`: blur dùng ảnh nền chung (nhẹ, mép có thể lấy cả nền ngoài
+  view); lens chụp riêng từng view ở độ phân giải thật (nét hơn, mép kiểu kính dày, tốn hơn).
+
+## Chọn chế độ nào
+
+Giờ chỉ cần một view `LiquidLayout`, chọn nền bằng `lgv_mode`:
+
+| `lgv_mode` | Nền phía sau | Bẻ cong | Chi phí | Hợp với |
+|---|---|---|---|---|
+| `tint` (mặc định) | không đụng tới | không | gần như không | mọi nơi, kể cả item list |
+| `blur` | mờ | tuỳ chọn, ở mép (`lgv_edgeRefraction`) | thấp | nút / thanh nổi trên nội dung, video |
+| `lens` | nét (hoặc mờ với `lgv_lensBlur`) | có, ở vành mép | cao hơn | nút, thanh nổi, kính lúp |
+
+Viền sáng bật tắt bằng `lgv_highlight` ở cả ba chế độ.
+
+### Chuyển từ view cũ
+
+`GlassLayout`, `GlassLensLayout`, `LiquidGlassLayout` vẫn chạy như trước nhưng đã đánh dấu
+deprecated; phần nền của chúng giờ dùng chung mã với `LiquidLayout`. Đổi sang `LiquidLayout`:
+
+| View cũ | `LiquidLayout` tương đương |
+|---|---|
+| `GlassLayout` | `lgv_mode="blur"` `lgv_highlight="false"` |
+| `GlassLensLayout` | như trên + `lgv_edgeRefraction="0.8"` `lgv_lensZoom="1.12"` `lgv_blurSaturation="1.4"` |
+| `LiquidGlassLayout` | `lgv_mode="blur"` + ba thuộc tính trên + `lgv_pressScale="0.92"` (viền là vệt sáng của `LiquidLayout`) |
+| view cũ + `gl_mode="lens"` | `lgv_mode="lens"` |
+
+Tên thuộc tính đổi theo: `gl_color` / `lgl_color` → `lgv_backgroundColor`; `gl_cornerRadius` →
+`lgv_cornerRadius` (view cũ không khai là bo tròn hai đầu → thêm `lgv_pill="true"`);
+`gl_blurRadius` → `lgv_blurRadius`; `gl_backdrop` → `lgv_backdrop`; `gll_refraction` /
+`lgl_refraction` → `lgv_edgeRefraction`; `lgl_pressScale` → `lgv_pressScale`.
+
+Khác biệt cần biết: màu nền mặc định của `LiquidLayout` là đen 20 % (view cũ là `#171717` 30 %), và
+viền của `LiquidLayout` là vệt sáng theo pháp tuyến mép, dáng hơi khác viền + ánh trượt của
+`LiquidGlassLayout`.
+
+## (Cũ) GlassLayout / GlassLensLayout — kính thuần, không liquid
 
 Chỉ cần lớp kính mờ (thanh điều khiển, nhãn, khung chữ nổi trên video) mà không muốn viền sáng:
 
@@ -267,7 +320,7 @@ Chỉ cần lớp kính mờ (thanh điều khiển, nhãn, khung chữ nổi tr
 và đậm màu hơn 40 % cho ra cảm giác thấu kính. Property trong code: `glassColor`, `cornerRadius`,
 `blurEnabled`, `refraction`.
 
-## LiquidGlassLayout — kính có blur nền thật + khúc xạ
+## (Cũ) LiquidGlassLayout — kính có blur nền thật + khúc xạ
 
 `LiquidLayout` ở trên không blur. Khi cần nút kính đầy đủ — **làm mờ thật nội dung phía sau**, bẻ
 cong ở mép và có viền sáng liquid (kiểu iOS), ví dụ nút nổi trên trình phát video — dùng
@@ -368,8 +421,9 @@ luôn thắng resource của thư viện):
 
 ## Lưu ý
 
-- `LiquidLayout` **không blur nội dung phía sau**. Ở chế độ mặc định nó chỉ phủ một lớp màu mờ + vẽ
-  vệt sáng bằng `Canvas`, nhờ vậy nhẹ và dùng được ở mọi nơi (chế độ `lens` thì có chụp lại nền). Muốn blur backdrop thật trên video / ảnh thì dùng
+- Ở chế độ mặc định (`tint`) `LiquidLayout` **không blur nội dung phía sau**: nó chỉ phủ một lớp màu
+  mờ + vẽ vệt sáng bằng `Canvas`, nhờ vậy nhẹ và dùng được ở mọi nơi (chế độ `blur` / `lens` thì có
+  chụp lại nền). Muốn blur backdrop thật trên video / ảnh thì dùng
   `LiquidGlassLayout` (mục trên); trên giao diện thường thì bọc một `BlurView`
   (`eightbitlab:blurview`) bên ngoài rồi để `LiquidLayout` bên trong nó.
 - Quầng sáng loang **vào trong**, không phải `BlurMaskFilter` — vì mask filter không chạy trên
